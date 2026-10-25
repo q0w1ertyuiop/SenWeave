@@ -1,0 +1,5 @@
+import {
+  "q0w1ertyuiop/senweave",
+}
+
+pkgtype(kind: "executable")

@@ -1,0 +1,82 @@
+///|
+/// Stable categories for the bounded RFC 8428 JSON input profile.
+pub(all) enum ErrorCode {
+  InvalidLimits
+  InputLimit
+  NestingLimit
+  RecordLimit
+  FieldLimit
+  StringLimit
+  NumberLimit
+  InvalidJson
+  DuplicateKey
+  InvalidRoot
+  InvalidRecord
+  WrongType
+  InvalidNumber
+  MissingValue
+  ConflictingValues
+  UnsupportedExtension
+  UnsupportedVersion
+  InvalidName
+  InvalidData
+} derive(Eq, Debug)
+
+///|
+pub extend ErrorCode with Eq::{equal, not_equal}
+
+///|
+pub extend ErrorCode with Debug::{to_repr}
+
+///|
+/// A diagnostic contains locations and a fixed explanation, never a value dump.
+/// Record indexes are zero-based. Line/column, when present, come from the JSON
+/// parser. Very long field names are omitted from diagnostics.
+pub struct Diagnostic {
+  code : ErrorCode
+  record_index : Int32?
+  field : String?
+  line : Int32?
+  column : Int32?
+  message : String
+} derive(Debug)
+
+///|
+pub extend Diagnostic with Debug::{to_repr}
+
+///|
+pub(all) suberror SenmlError {
+  Invalid(Diagnostic)
+} derive(Debug)
+
+///|
+pub extend SenmlError with Debug::{to_repr}
+
+///|
+pub fn SenmlError::diagnostic(self : SenmlError) -> Diagnostic {
+  let Invalid(diagnostic) = self
+  diagnostic
+}
+
+///|
+fn reject(
+  code : ErrorCode,
+  record_index : Int32?,
+  field : String?,
+  message : String,
+  line? : Int32,
+  column? : Int32,
+) -> Unit raise SenmlError {
+  let safe_field = match field {
+    Some(name) if name.length() <= 128 => Some(name)
+    _ => None
+  }
+  raise Invalid({
+    code,
+    record_index,
+    field: safe_field,
+    line,
+    column,
+    message,
+  })
+}

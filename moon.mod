@@ -1,10 +1,10 @@
 name = "q0w1ertyuiop/senweave"
 
-version = "0.1.0-dev.1"
+version = "0.1.0-dev.2"
 
 license = "Apache-2.0"
 
-description = "SenML measurement semantics and JSON/CBOR interchange for MoonBit; initial label vocabulary"
+description = "Typed, bounded SenML JSON parsing and validation for MoonBit; JSON/CBOR interchange in development"
 
 readme = "README.md"
 

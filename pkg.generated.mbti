@@ -6,10 +6,51 @@ import {
 }
 
 // Values
+pub fn parse_json(String, limits? : ParseLimits) -> Pack raise SenmlError
 
 // Errors
+pub(all) suberror SenmlError {
+  Invalid(Diagnostic)
+} derive(@debug.Debug)
+pub fn SenmlError::diagnostic(Self) -> Diagnostic
+pub fn SenmlError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
+pub struct Diagnostic {
+  code : ErrorCode
+  record_index : Int32?
+  field : String?
+  line : Int32?
+  column : Int32?
+  message : String
+} derive(@debug.Debug)
+pub fn Diagnostic::to_repr(Self) -> @debug.Repr
+
+pub(all) enum ErrorCode {
+  InvalidLimits
+  InputLimit
+  NestingLimit
+  RecordLimit
+  FieldLimit
+  StringLimit
+  NumberLimit
+  InvalidJson
+  DuplicateKey
+  InvalidRoot
+  InvalidRecord
+  WrongType
+  InvalidNumber
+  MissingValue
+  ConflictingValues
+  UnsupportedExtension
+  UnsupportedVersion
+  InvalidName
+  InvalidData
+} derive(Eq, @debug.Debug)
+pub fn ErrorCode::equal(Self, Self) -> Bool
+pub fn ErrorCode::not_equal(Self, Self) -> Bool
+pub fn ErrorCode::to_repr(Self) -> @debug.Repr
+
 pub(all) enum Label {
   BaseVersion
   BaseName
@@ -34,6 +75,57 @@ pub fn Label::from_json_name(String) -> Self?
 pub fn Label::json_name(Self) -> String
 pub fn Label::not_equal(Self, Self) -> Bool
 pub fn Label::to_repr(Self) -> @debug.Repr
+
+pub(all) enum MeasurementValue {
+  Numeric(Number)
+  Text(String)
+  Boolean(Bool)
+  Data(Bytes)
+} derive(@debug.Debug)
+pub fn MeasurementValue::to_repr(Self) -> @debug.Repr
+
+pub struct Number {
+  // private fields
+} derive(@debug.Debug)
+pub fn Number::as_double(Self) -> Double
+pub fn Number::json_literal(Self) -> String
+pub fn Number::to_repr(Self) -> @debug.Repr
+
+pub struct Pack {
+  // private fields
+}
+pub fn Pack::len(Self) -> Int32
+pub fn Pack::measurement_count(Self) -> Int32
+pub fn Pack::record(Self, Int32) -> Record?
+
+pub(all) struct ParseLimits {
+  max_input_code_units : Int32
+  max_records : Int32
+  max_depth : Int32
+  max_fields_per_record : Int32
+  max_string_code_units : Int32
+  max_number_code_units : Int32
+} derive(@debug.Debug)
+pub fn ParseLimits::default() -> Self
+pub fn ParseLimits::to_repr(Self) -> @debug.Repr
+
+pub struct Record {
+  base_name : String?
+  base_time : Number?
+  base_unit : String?
+  base_value : Number?
+  base_sum : Number?
+  base_version : Number?
+  name : String?
+  unit : String?
+  value : MeasurementValue?
+  sum : Number?
+  time : Number?
+  update_time : Number?
+  ignored_extension_count : Int32
+} derive(@debug.Debug)
+pub fn Record::is_measurement(Self) -> Bool
+pub fn Record::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
