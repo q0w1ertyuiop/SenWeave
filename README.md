@@ -12,6 +12,8 @@ SenML 数据包里的测量记录可以继承此前出现的设备名称、基�
 
 安装 [MoonBit 官方工具链](https://www.moonbitlang.com/download/)，JS 与 wasm-gc 目标需要可用的 JavaScript 运行时，native 目标需要平台 C 工具链。
 
+当前代码使用 `Int32` 命名，开发验证工具链为 `moon 0.1.20261023`、`moonc v0.10.17+d971670cd`。请使用这一版或更新的兼容工具链；CI 使用官方 latest 通道，并在日志中记录实际版本。
+
 ```sh
 moon check --target js --deny-warn
 moon test --target js

@@ -51,7 +51,7 @@ pub fn Label::json_name(self : Label) -> String {
 
 ///|
 /// The integer CBOR map key from RFC 8428, Section 6, Table 4.
-pub fn Label::cbor_key(self : Label) -> Int {
+pub fn Label::cbor_key(self : Label) -> Int32 {
   match self {
     BaseVersion => -1
     BaseName => -2
@@ -97,7 +97,7 @@ pub fn Label::from_json_name(name : String) -> Label? {
 
 ///|
 /// Look up an RFC 8428 integer CBOR label. Unknown integer keys return None.
-pub fn Label::from_cbor_key(key : Int) -> Label? {
+pub fn Label::from_cbor_key(key : Int32) -> Label? {
   match key {
     -1 => Some(BaseVersion)
     -2 => Some(BaseName)
