@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">SenWeave</title>
+  <desc id="desc">Interwoven blue and green measurement streams.</desc>
+  <rect width="128" height="128" rx="30" fill="#102539"/>
+  <path d="M27 37h26c25 0 20 54 48 54M27 64h19c26 0 29-27 55-27M27 91h20c24 0 25-27 54-27" fill="none" stroke="#49d5b0" stroke-width="10" stroke-linecap="round"/>
+  <path d="M27 37h26c25 0 20 54 48 54" fill="none" stroke="#65aaff" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="27" cy="64" r="6" fill="#f3f7fb"/>
+  <circle cx="101" cy="64" r="6" fill="#f3f7fb"/>
+</svg>
