@@ -4,7 +4,7 @@
 
 面向 MoonBit 物联网应用的 SenML 测量数据语义与 JSON／CBOR 交换库。
 
-**当前阶段：SenML JSON／CBOR 解析、基字段展开与独立记录输出，版本 `0.1.0-dev.4`。** 提供带资源上限的解析与展开、类型化记录、四种测量值和结构化错误。已用 Python `cbor2` 验证双向 CBOR 交换；网络集成和 Mooncakes 发布尚未完成。
+**当前阶段：SenML JSON／CBOR 库与离线检查工具，版本 `0.1.0-dev.5`。** 支持带资源上限的解析、基字段展开、筛选、独立记录输出，以及文件／管道检查和转换。已完成 `cbor2` 编码对照和 KPN SenML 指定范围互操作；网络集成和 Mooncakes 发布尚未完成。
 
 SenML 数据包里的测量记录可以继承此前出现的设备名称、基准时间、单位和基准数值。记录从原数据包取出前，需要先应用这些信息，才能安全地独立保存或筛选。项目依据 [RFC 8428](https://www.rfc-editor.org/rfc/rfc8428.html)，为设备网关、采集服务和离线工具提供这层共享能力。
 
@@ -30,7 +30,20 @@ moon run examples/cbor --target js
 
 `examples/cbor` 输出原始包与展开包的 CBOR 十六进制，以及展开后的 JSON。可通过 `-- --hex <十六进制>` 传入外部 CBOR 数据。
 
-CI 针对 Windows、Linux 和 `native`、`js`、`wasm-gc` 三个后端运行相同测试与示例，另运行 Python `cbor2` 互操作检查。本批本地三个后端各通过 54 个测试和双向交换检查，复现命令见 [CBOR 约定](docs/cbor-profile.md)。
+CI 针对 Windows、Linux 和 `native`、`js`、`wasm-gc` 三个后端运行相同测试与示例，另设两平台 CLI 检查与 Python 互操作任务。本批本地三个后端各通过 58 个 MoonBit 测试，CLI 端到端检查及外部互操作结果见 [离线工具](docs/cli.md) 和 [互操作范围](docs/interoperability.md)。
+
+## 检查实际数据文件
+
+CLI 使用 Node.js 24 及以上作为文件与管道宿主，语义处理仍由编译后的 MoonBit 库完成。先在仓库根目录构建：
+
+```sh
+moon build cmd/bridge --target js --release
+node bin/senweave.mjs check examples/data/gateway.json --now 1793000000
+node bin/senweave.mjs resolve examples/data/gateway.json --now 1793000000 --name urn:dev:gateway:demo:temperature
+node bin/senweave.mjs resolve examples/data/gateway.json --now 1793000000 --to cbor --output measurements.cbor
+```
+
+`check` 验证完整展开过程，包含缺失参考时刻和数值溢出；`resolve` 输出按时间排列的独立测量。文件输出拒绝覆盖已有文件，未通过校验时不创建输出。默认从标准输入读取，也可用 `--from cbor` 读取二进制包。详细参数、退出码和输入边界见 [CLI 说明](docs/cli.md)。
 
 ## 已有接口
 
@@ -59,7 +72,7 @@ CBOR 使用标准整数标签和原生字节串，数字支持整数、浮点与
 
 ## 下一步实现
 
-1. 对照更多 RFC 示例与外部 SenML 实现验证语义，补充离线检查工具与真实传输集成。
+1. 扩充外部 SenML 实现和 RFC 示例覆盖，完成真实传输集成。
 2. 正式发布 Mooncakes 包，在独立消费项目中验证注册表安装与使用。
 
 首版范围为 RFC 8428 的 SenML JSON／CBOR 数据包。XML、EXI、SenSML 无限流和单位换算不在首版范围内。
@@ -74,4 +87,4 @@ CBOR 使用标准整数标签和原生字节串，数字支持整数、浮点与
 
 ## 许可
 
-[Apache-2.0](LICENSE)。标准行为以 RFC 8428 为准；互操作验证计划参考 [absmach/senml](https://github.com/absmach/senml) 和 [KPN Python SenML](https://github.com/kpn-iot/senml-python-library)。当前实现未复制这些项目的源代码。
+[Apache-2.0](LICENSE)。标准行为以 RFC 8428 为准；[KPN Python SenML](https://github.com/kpn-iot/senml-python-library) 的测试版本、已通过流程和已知差异见 [互操作范围](docs/interoperability.md)。[absmach/senml](https://github.com/absmach/senml) 已阅读实现，尚未运行对照。当前实现未复制这些项目的源代码。

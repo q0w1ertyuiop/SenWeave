@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="590" viewBox="0 0 1120 590" role="img" aria-labelledby="title desc">
   <title id="title">SenWeave implementation and planned architecture</title>
-  <desc id="desc">Implemented: bounded JSON and CBOR parsing, shared typed records, base and time resolution, chronological measurements, filtering and standalone JSON/CBOR output. CBOR codec is reused behind wire preflight. Python cbor2 verifies both directions. Host supplies the clock and transport.</desc>
+  <desc id="desc">Implemented: bounded JSON and CBOR parsing, shared records, base and time resolution, filtering and standalone output. A Node.js CLI supplies bounded file and pipe input, strict UTF-8 and exclusive new-file output. MoonBit retains data semantics. Python cbor2 and a KPN SenML subset provide interoperability checks. Transport and registry publication remain planned.</desc>
   <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9" fill="#758397"/></marker></defs>
   <rect width="1120" height="590" rx="20" fill="#f5f8fc"/>
   <g font-family="Segoe UI,Arial,sans-serif">
@@ -26,11 +26,11 @@
       <text x="870" y="287">Filter + source indexes</text><text x="870" y="313">Standalone JSON / CBOR</text><text x="870" y="339">Gateway + cbor2 checks</text>
     </g>
     <g stroke="#758397" stroke-width="2" marker-end="url(#arrow)"><path d="M268 295h32"/><path d="M538 295h32"/><path d="M808 295h32"/></g>
-    <rect x="42" y="398" width="1036" height="64" rx="12" fill="#e9eef5"/>
-    <text x="64" y="424" font-size="15" font-weight="600" fill="#31435b">Host boundary</text>
-    <text x="64" y="448" font-size="14" fill="#526278">Host supplies reception time, files and networking · Core validates encoded CBOR and applies measurement semantics</text>
+    <rect x="42" y="398" width="1036" height="64" rx="12" fill="#e0f6ef" stroke="#14775d" stroke-width="2"/>
+    <text x="64" y="424" font-size="15" font-weight="600" fill="#145742">Node.js CLI · check / resolve · MoonBit semantic core</text>
+    <text x="64" y="448" font-size="14" fill="#145742">Bounded files / stdin · Strict UTF-8 · Explicit clock · Exclusive new-file output · JSON / CBOR exchange</text>
     <rect x="42" y="492" width="1036" height="62" rx="12" fill="#fff" stroke="#9aa7b7" stroke-width="1.5" stroke-dasharray="6 4"/>
     <text x="64" y="517" font-size="15" font-weight="600" fill="#31435b">Planned integration</text>
-    <text x="64" y="540" font-size="14" fill="#526278">External SenML semantic checks · MQTT / CoAP transport · Offline inspector · Mooncakes release</text>
+    <text x="64" y="540" font-size="14" fill="#526278">More SenML implementations and profiles · MQTT / CoAP transport · Mooncakes release</text>
   </g>
 </svg>

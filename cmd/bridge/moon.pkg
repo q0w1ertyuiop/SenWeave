@@ -1,0 +1,9 @@
+import {
+  "q0w1ertyuiop/senweave/internal/inspector",
+}
+
+pkgtype(kind: "executable")
+
+options(
+  link: { "js": { "exports": [ "process_input" ], "format": "cjs" } },
+)

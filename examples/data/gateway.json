@@ -1,0 +1,6 @@
+[
+  {"bn":"urn:dev:gateway:demo:","bu":"Cel","bv":20},
+  {"n":"temperature","v":2.5,"t":-30},
+  {"n":"door","vb":false,"u":"/"},
+  {"n":"temperature","v":3,"t":-60}
+]

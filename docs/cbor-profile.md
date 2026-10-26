@@ -1,4 +1,4 @@
-# CBOR 约定 · 0.1.0-dev.4
+# CBOR 约定 · 0.1.0-dev.5
 
 `parse_cbor(bytes, limits?, max_input_bytes?)` 把 `application/senml+cbor` 数据包读入与 JSON 相同的 `Pack`。基字段继承、名称检查、版本 10、测量类型和错误处理复用现有实现。依据 [RFC 8428 §6](https://www.rfc-editor.org/rfc/rfc8428.html#section-6)，基础标签采用整数键，二进制值使用 CBOR 字节串。
 
@@ -48,7 +48,7 @@ CBOR 输入的整数会保留准确十进制文本，如 `9007199254740993` 和 
 
 ## 复现验证
 
-本批在 native、JS、wasm-gc 各运行 54 个测试。新增 19 个 CBOR 测试包含独立字节样本、准确整数边界、浮点宽度、Tag 4、二进制、重复标签、截断、巨大声明、不定长项、UTF-8 和资源上限。
+目前在 native、JS、wasm-gc 各通过 58 项 MoonBit 测试。其中 19 项 CBOR 测试包含独立字节样本、准确整数边界、浮点宽度、Tag 4、二进制、重复标签、截断、巨大声明、不定长项、UTF-8 和资源上限。
 
 Python 3.9 及以上可运行外部编码对照；使用独立虚拟环境安装测试依赖：
 
@@ -60,4 +60,4 @@ python scripts/check_cbor_interop.py --target native
 python scripts/check_cbor_interop.py --target wasm-gc
 ```
 
-脚本先用 Python `cbor2` 读取 MoonBit 输出，再用它生成包含 Tag 4、二进制、布尔和最大 UInt64 的数据包交给 SenWeave，核对原始值与展开结果。三个本地目标均通过；CI 另设 JS 对照任务。这验证了 CBOR 编码交换及选定场景，外部 SenML 库的完整语义对照尚未完成。
+脚本先用 Python `cbor2` 读取 MoonBit 输出，再用它生成包含 Tag 4、二进制、布尔和最大 UInt64 的数据包交给 SenWeave，核对原始值与展开结果。三个本地目标均通过；CI 另设 JS 对照任务。外部 SenML 库的已验证场景与差异见 [互操作范围](interoperability.md)。

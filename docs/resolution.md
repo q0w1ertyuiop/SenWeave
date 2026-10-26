@@ -1,4 +1,4 @@
-# 展开和输出约定 · 0.1.0-dev.4
+# 展开和输出约定 · 0.1.0-dev.5
 
 网关先展开完整数据包，再筛选、归档或转发测量。依据 [RFC 8428 §4.5–4.6](https://www.rfc-editor.org/rfc/rfc8428.html#section-4.5)，`Pack::resolve` 返回不含基字段、没有相对时间、按时间排列的 `ResolvedPack`。
 
