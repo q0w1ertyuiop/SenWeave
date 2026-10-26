@@ -13,10 +13,21 @@ export class SenWeaveError extends Error {
   readonly diagnostic: Diagnostic;
   constructor(diagnostic: Diagnostic);
 }
+export interface ResourceLimits {
+  maxInputBytes?: number;
+  maxRecords?: number;
+  maxDepth?: number;
+  maxFieldsPerRecord?: number;
+  maxStringCodeUnits?: number;
+  maxNumberCodeUnits?: number;
+  maxExpandedCodeUnits?: number;
+  maxOutputBytes?: number;
+}
 export interface CheckOptions {
   from?: Format;
   referenceTime?: number | string;
   rejectExtensions?: boolean;
+  limits?: ResourceLimits;
 }
 export interface CheckResult {
   valid: true;

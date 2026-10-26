@@ -4,6 +4,8 @@ package "q0w1ertyuiop/senweave/cmd/bridge"
 // Values
 pub fn process_input(String, String, String, String, String, String) -> String
 
+pub fn process_input_with_policy(String, String, String, String, String, String, String) -> String
+
 // Errors
 
 // Types and methods

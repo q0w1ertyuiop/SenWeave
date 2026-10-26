@@ -42,7 +42,8 @@ pub extend ErrorCode with Debug::{to_repr}
 ///|
 /// A diagnostic contains locations and a fixed explanation, never a value dump.
 /// Record indexes are zero-based. Line/column, when present, come from the JSON
-/// parser. Very long field names are omitted from diagnostics.
+/// parser. Only standard SenML field names are retained; extension names may
+/// contain application metadata and are never copied into a diagnostic.
 pub struct Diagnostic {
   code : ErrorCode
   record_index : Int32?
@@ -79,7 +80,7 @@ fn reject(
   column? : Int32,
 ) -> Unit raise SenmlError {
   let safe_field = match field {
-    Some(name) if name.length() <= 128 => Some(name)
+    Some(name) if Label::from_json_name(name) is Some(_) => Some(name)
     _ => None
   }
   raise Invalid({

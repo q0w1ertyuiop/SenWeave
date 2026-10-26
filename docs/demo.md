@@ -23,7 +23,7 @@ node examples/coap/retry-demo.mjs
 | `same-key-different-payload` | 保留业务键，把数值偏移从 2.5 改成 3.5 | `4.09` | 1 |
 | `different-source` | `room-b` 使用相同批次键，提交独立数据 | `2.04` | 2 |
 
-本地已运行这四步。末行的 `status=passed` 来自运行时断言，不是预先打印的成功样例。测量实际保存为 `sensor:temperature`、数值 `22.5`、时刻 `1792999997`；重试没有按新接收时刻改写旧记录。
+脚本逐步断言响应和账本内容，全部通过后输出 `status=passed`，失败时以非零退出码结束。已运行结果中，测量保存为 `sensor:temperature`、数值 `22.5`、时刻 `1792999997`；重试没有按新接收时刻改写旧记录。
 
 ![请求、展开与业务重试的处理流程](idempotency.svg)
 
@@ -35,6 +35,6 @@ node examples/coap/retry-demo.mjs
 
 **最后说明怎样复用。** MoonBit 根包可供文件工具和设备网关直接消费；CoAP 子包提供纯事件接口，宿主选择数据库或消息队列，并报告存储结果。Node.js／SQLite 只是可替换的运行示例。已经复用 Mooncakes 的 CBOR 与 CoAP 包，代码和测试可以独立查看。
 
-**边界说清楚。** 来源查询不是设备认证；示例只在回环地址运行。幂等依赖账本保留原记录，格式或字节变化会冲突。MQTT、native UDP 宿主、Mooncakes 正式发布尚未完成；本项目没有宣称经过真实硬件掉电或公网压力测试。
+**适用范围与测试边界。** 来源查询不提供设备认证；示例只在回环地址运行。幂等依赖账本保留原记录，格式或字节变化会冲突。MQTT、native UDP 宿主、Mooncakes 正式发布尚未完成；真实硬件掉电和公网压力测试尚未开展。
 
 实现接口和测试范围见 [业务幂等约定](idempotency.md)、[传输接入](transport.md) 和 [互操作记录](interoperability.md)。

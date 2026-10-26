@@ -20,6 +20,28 @@ pub fn process_input(
   reference_time_text : String,
   name : String,
 ) -> String {
+  process_input_with_policy(
+    input, input_format, action, output_format, reference_time_text, name, "{}",
+  )
+}
+
+///|
+/// Apply explicit host quotas and extension policy before semantic expansion.
+/// The six-argument entry point preserves the default CLI profile.
+pub fn process_input_with_policy(
+  input : String,
+  input_format : String,
+  action : String,
+  output_format : String,
+  reference_time_text : String,
+  name : String,
+  policy_text : String,
+) -> String {
+  guard parse_policy(policy_text) is Some(policy) else {
+    return error_result(
+      "InvalidLimits", "Policy requires bounded positive integer quotas and a boolean extension setting.",
+    )
+  }
   if (input_format != "json" && input_format != "cbor") ||
     (action != "check" && action != "resolve") ||
     (output_format != "json" && output_format != "cbor") {
@@ -41,7 +63,7 @@ pub fn process_input(
     Some(n)
   }
   let bytes = if input_format == "cbor" {
-    if input.length() > 2_097_152 {
+    if input.length() > 2 * policy.max_input_bytes {
       return error_result(
         "InputLimit", "CBOR hex input exceeds the byte limit.",
       )
@@ -50,19 +72,29 @@ pub fn process_input(
       _ => return error_result("InvalidCbor", "Invalid CBOR hex transport.")
     }
   } else {
-    b""
+    if input.length() > policy.max_input_bytes {
+      return error_result("InputLimit", "JSON text exceeds the input limit.")
+    }
+    @utf8.encode(input)
   }
   let result = try {
-    let raw = if input_format == "json" {
-      @senweave.parse_json(input)
+    let format = if input_format == "json" {
+      @senweave.SenmlJson
     } else {
-      @senweave.parse_cbor(bytes)
+      @senweave.SenmlCbor
     }
-    let mut ignored_extensions = 0
-    for i in 0..<raw.len() {
-      ignored_extensions += raw.record(i).unwrap().ignored_extension_count
-    }
-    let resolved = raw.resolve(reference_time?)
+    let raw = @senweave.parse_payload(
+      bytes,
+      format,
+      limits=policy.parse_limits,
+      max_input_bytes=policy.max_input_bytes,
+      reject_extensions=policy.reject_extensions,
+    )
+    let ignored_extensions = raw.ignored_extension_count()
+    let resolved = raw.resolve(
+      reference_time?,
+      max_expanded_code_units=policy.max_expanded_code_units,
+    )
     let selected = if name == "" {
       resolved
     } else {
@@ -79,7 +111,14 @@ pub fn process_input(
     } else if output_format == "json" {
       selected.to_json_string()
     } else {
-      @hex.encode(selected.to_cbor_bytes())
+      @hex.encode(
+        selected.to_cbor_bytes(max_output_bytes=policy.max_output_bytes),
+      )
+    }
+    if action == "resolve" &&
+      output_format == "json" &&
+      @utf8.encode(data).length() > policy.max_output_bytes {
+      return error_result("OutputLimit", "JSON output exceeds the byte limit.")
     }
     Json::object({
       "ok": Json::boolean(true),

@@ -254,7 +254,7 @@ test "optional extensions are ignored while mandatory extensions reject" {
     "[{\"n\":\"a\",\"v\":1,\"vendor_\":true}]",
     @senweave.UnsupportedExtension,
   )
-  assert_eq(diagnostic.field, Some("vendor_"))
+  assert_eq(diagnostic.field, None)
   ignore(rejected("[{\"n\":\"a\",\"V\":1}]", @senweave.MissingValue))
 }
 
@@ -351,14 +351,14 @@ test "diagnostics do not include rejected measurement values" {
 }
 
 ///|
-test "escaped mandatory labels and long diagnostic field names are bounded" {
+test "escaped mandatory labels and unknown diagnostic field names are omitted" {
   let escaped = rejected(
     (
       #|[{"n":"a","v":1,"vendor\u005f":true}]
     ),
     @senweave.UnsupportedExtension,
   )
-  assert_eq(escaped.field, Some("vendor_"))
+  assert_eq(escaped.field, None)
   let mut key = ""
   for _ in 0..<129 {
     key += "x"
@@ -370,6 +370,19 @@ test "escaped mandatory labels and long diagnostic field names are bounded" {
   )
   assert_eq(diagnostic.field, None)
   assert_eq(diagnostic.record_index, Some(0))
+}
+
+///|
+test "duplicate extension keys and nested application keys do not enter diagnostics" {
+  for
+    input in [
+      "[{\"n\":\"a\",\"v\":1,\"private-key\":1,\"private-key\":2}]", "[{\"n\":\"a\",\"v\":1,\"vendor\":{\"private-key\":1,\"private-key\":2}}]",
+    ] {
+    let diagnostic = rejected(input, @senweave.DuplicateKey)
+    assert_eq(diagnostic.field, None)
+    assert_eq(diagnostic.line is Some(_), true)
+    assert_eq(diagnostic.column is Some(_), true)
+  }
 }
 
 ///|

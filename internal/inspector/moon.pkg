@@ -2,8 +2,6 @@ import {
   "q0w1ertyuiop/senweave",
   "moonbitlang/core/string",
   "moonbitlang/core/encoding/hex",
-}
-
-import {
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
-} for "test"
+}

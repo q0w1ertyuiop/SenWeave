@@ -24,7 +24,7 @@ python -m pip install cbor2==5.7.1 kpn-senml==1.0.1
 python scripts/check_senml_interop.py
 ```
 
-本批已运行并通过以下 5 条流程：
+针对该版本已运行并通过以下 5 条流程：
 
 | 方向 | 核对内容 |
 | --- | --- |

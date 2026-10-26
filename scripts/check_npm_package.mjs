@@ -38,14 +38,20 @@ const cbor=resolve(input,{to:'cbor'});
 assert.ok(cbor.data instanceof Uint8Array);
 assert.ok(resolve(cbor.data,{from:'cbor'}).data.includes('9007199254740993'));
 assert.throws(()=>check('[{"n":"x","v":1}]'),e=>e instanceof SenWeaveError && e.code==='MissingReferenceTime');
+assert.throws(()=>check(input,{limits:{maxRecords:1}}),e=>e.code==='RecordLimit');
+assert.throws(()=>resolve(input,{limits:{maxOutputBytes:1}}),e=>e.code==='OutputLimit');
+assert.throws(()=>check('[{"n":"x","v":1,"vendor":true}]',{rejectExtensions:true}),e=>e.code==='IgnoredExtensions');
+assert.throws(()=>check('[{"n":"x","v":1,"private-key_":true}]'),e=>e.code==='UnsupportedExtension' && !Object.hasOwn(e.diagnostic,'field'));
 console.log('installed-consumer: passed');`;
   writeFileSync(join(directory, 'consumer.mjs'), consumer);
   run(process.execPath, ['consumer.mjs'], directory);
-  writeFileSync(join(directory, 'consumer.mts'), `import {check, resolve, type ResolveOptions, SenWeaveError} from '${manifest.name}';
+  writeFileSync(join(directory, 'consumer.mts'), `import {check, resolve, type ResolveOptions, type ResourceLimits, SenWeaveError} from '${manifest.name}';
 const input='[]';
 const json: string=resolve(input).data;
 const binary: Uint8Array=resolve(input,{to:'cbor'}).data;
 const count: number=check(input).measurements;
+const quotas: ResourceLimits={maxRecords:16,maxInputBytes:8192};
+check(input,{limits:quotas});
 const options: ResolveOptions={to:Math.random()>0.5?'json':'cbor'};
 const union=resolve(input,options);
 if(union.format==='json'){const text: string=union.data; void text;}
@@ -55,6 +61,10 @@ const wrong: string=resolve(input,{to:'cbor'}).data;
 check([{n:'x',v:1}]);
 // @ts-expect-error unknown options are rejected
 check(input,{extra:true});
+// @ts-expect-error quota values must be numeric
+check(input,{limits:{maxRecords:'16'}});
+// @ts-expect-error unknown quotas are rejected
+check(input,{limits:{recordCount:16}});
 const errorCode: string=new SenWeaveError({code:'Example',message:'example'}).code;
 void [json,binary,count,wrong,errorCode];`);
   run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--module', 'NodeNext', '--target', 'ES2022', 'consumer.mts'], directory);

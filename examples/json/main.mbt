@@ -23,7 +23,7 @@ fn main raise {
     error => {
       let diagnostic = error.diagnostic()
       println(
-        "rejected extension at record \{diagnostic.record_index.unwrap()}: \{diagnostic.field.unwrap()}",
+        "rejected extension at record \{diagnostic.record_index.unwrap()}: \{Repr(diagnostic.code)}",
       )
     }
   } noraise {

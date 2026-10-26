@@ -217,7 +217,12 @@ test "extension policy ignores optional nested values and rejects mandatory labe
     b"\x81\xa3\x00\x61x\x02\x01\x67vendor_\xf6",
     @senweave.UnsupportedExtension,
   )
-  assert_eq(error.field, Some("vendor_"))
+  assert_eq(error.field, None)
+  let duplicate = cbor_rejected(
+    b"\x81\xa4\x00\x61x\x02\x01\x61z\xf6\x61z\xf4",
+    @senweave.DuplicateKey,
+  )
+  assert_eq(duplicate.field, None)
 }
 
 ///|

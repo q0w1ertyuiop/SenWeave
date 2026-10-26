@@ -5,5 +5,10 @@ import {
 pkgtype(kind: "executable")
 
 options(
-  link: { "js": { "exports": [ "process_input" ], "format": "cjs" } },
+  link: {
+    "js": {
+      "exports": [ "process_input", "process_input_with_policy" ],
+      "format": "cjs",
+    },
+  },
 )

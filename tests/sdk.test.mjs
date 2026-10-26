@@ -68,3 +68,69 @@ test('SDK diagnostics keep locations without echoing rejected measurement conten
     assert.equal(JSON.stringify(error.diagnostic).includes('secret-device'), false);
   }
 });
+
+test('SDK enforces smaller application quotas in both representations before filtering', () => {
+  const binary = resolve(source, { to: 'cbor' }).data;
+  for (const [input, from] of [[source, 'json'], [binary, 'cbor']]) {
+    for (const [limits, code] of [
+      [{ maxRecords: 1 }, 'RecordLimit'], [{ maxInputBytes: 1 }, 'InputLimit'],
+      [{ maxFieldsPerRecord: 1 }, 'FieldLimit'], [{ maxStringCodeUnits: 3 }, 'StringLimit'],
+      [{ maxNumberCodeUnits: 3 }, 'NumberLimit'], [{ maxExpandedCodeUnits: 2 }, 'ExpansionLimit'],
+    ]) assert.throws(() => resolve(input, { from, name: 'missing', limits }), rejected(code));
+    assert.equal(check(input, { from, limits: { maxRecords: 3 } }).measurements, 2);
+  }
+  assert.throws(() => check('[{"n":"x","v":1,"vendor":[[[]]]}]', { limits: { maxDepth: 3 } }), rejected('NestingLimit'));
+  assert.throws(() => check(new Uint8Array([255, 255]), { limits: { maxInputBytes: 1 } }), rejected('InputLimit'));
+});
+
+test('SDK output quotas count UTF-8 bytes and keep empty format boundaries', () => {
+  const input = '[{"n":"x","vs":"😀中","t":1793000000}]';
+  const baseline = resolve(input).data, bytes = Buffer.byteLength(baseline);
+  assert.equal(resolve(input, { limits: { maxOutputBytes: bytes } }).data, baseline);
+  assert.throws(() => resolve(input, { limits: { maxOutputBytes: bytes - 1 } }), rejected('OutputLimit'));
+  assert.equal(resolve('[]', { limits: { maxOutputBytes: 2, maxExpandedCodeUnits: 2 } }).data, '[]');
+  assert.throws(() => resolve('[]', { limits: { maxOutputBytes: 1 } }), rejected('OutputLimit'));
+  assert.deepEqual(resolve('[]', { to: 'cbor', limits: { maxOutputBytes: 1 } }).data, new Uint8Array([128]));
+  assert.throws(() => resolve(source, { to: 'cbor', limits: { maxOutputBytes: 1 } }), rejected('OutputLimit'));
+  assert.equal(check(source, { limits: { maxOutputBytes: 1 } }).valid, true);
+});
+
+test('SDK rejects invalid quotas and never inherits settings or invokes settings accessors', () => {
+  for (const limits of [null, [], { extra: 1 }, { maxRecords: '1' }, { maxRecords: 0 },
+    { maxRecords: -1 }, { maxRecords: 1.5 }, { maxRecords: 4097 }, { maxDepth: 33 },
+    { maxInputBytes: Infinity }, { maxOutputBytes: NaN }, { [Symbol('quota')]: 1 }]) {
+    assert.throws(() => check('[]', { limits }), rejected('InvalidLimits'));
+  }
+  let called = false;
+  const accessor = { get maxRecords() { called = true; return 1; } };
+  assert.throws(() => check('[]', { limits: accessor }), rejected('InvalidLimits'));
+  assert.throws(() => check('[]', { get from() { called = true; return 'json'; } }), rejected('InvalidArguments'));
+  assert.equal(called, false);
+  assert.equal(check(source, Object.create({ from: 'cbor', limits: { maxRecords: 1 } })).measurements, 2);
+  assert.equal(check(source, { limits: Object.create({ maxRecords: 1 }) }).measurements, 2);
+  assert.equal(check(source, { limits: { maxRecords: undefined } }).measurements, 2);
+});
+
+test('SDK strict extension admission runs before expansion for JSON and CBOR', () => {
+  const input = '[{"n":"x","v":1e308,"bv":1e308,"vendor":true}]';
+  assert.throws(() => check(input, { rejectExtensions: true }), rejected('IgnoredExtensions'));
+  const binary = Buffer.from('81a30061780201617af5', 'hex');
+  assert.throws(() => check(binary, { from: 'cbor', rejectExtensions: true }), rejected('IgnoredExtensions'));
+  assert.throws(() => check('[{"n":"x","v":1}]'), rejected('MissingReferenceTime'));
+});
+
+test('SDK diagnostics omit application-defined names in JSON and CBOR errors', () => {
+  const inputs = [
+    ['[{"n":"x","v":1,"private-key_":true}]', 'json'],
+    ['[{"n":"x","v":1,"vendor":{"private-key":1,"private-key":2}}]', 'json'],
+    [Buffer.from('81a300617802016c707269766174652d6b65795ff5', 'hex'), 'cbor'],
+  ];
+  for (const [input, from] of inputs) {
+    assert.throws(() => check(input, { from }), error => {
+      assert.equal(error instanceof SenWeaveError, true);
+      assert.equal(error.diagnostic.field, undefined);
+      assert.equal(JSON.stringify(error.diagnostic).includes('private-key'), false);
+      return true;
+    });
+  }
+});

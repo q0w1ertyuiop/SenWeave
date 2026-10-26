@@ -89,13 +89,27 @@ test "archive consumer completes a public deferred CoAP delivery" {
   assert_eq(completed, true)
   assert_eq(collector.pending_count(), 0)
 }
+
+///|
+test "archive consumer diagnostics retain standard labels but omit extension names" {
+  for (input, expected) in [
+    ("[{\\"n\\":\\"x\\",\\"v\\":\\"secret-value\\"}]", Some("v")),
+    ("[{\\"n\\":\\"x\\",\\"v\\":1,\\"private-key_\\":true}]", None),
+  ] {
+    try @senweave.parse_json(input) catch {
+      error => assert_eq(error.diagnostic().field, expected)
+    } noraise {
+      _ => fail("Expected a diagnostic.")
+    }
+  }
+}
 ''', encoding="utf-8")
         run(["moon", "check", "--target", "all", "--deny-warn"], consumer)
         for target in targets:
             output = run(["moon", "test", "--target", target], consumer)
             assert "failed: 0" in output, output
         print(json.dumps({"module": name, "version": version, "archive_files": len(names),
-            "targets": targets, "consumer_cases": 2, "status": "passed", "sha256": hashlib.sha256(archive.read_bytes()).hexdigest()}))
+            "targets": targets, "consumer_cases": 3, "status": "passed", "sha256": hashlib.sha256(archive.read_bytes()).hexdigest()}))
 
 
 if __name__ == "__main__":
