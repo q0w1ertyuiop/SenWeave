@@ -25,6 +25,10 @@ pub(all) enum ErrorCode {
   ArithmeticOverflow
   UnrepresentableTime
   ExpansionLimit
+  InvalidCbor
+  InvalidCborLabel
+  UnsupportedCborType
+  OutputLimit
 } derive(Eq, Debug)
 
 ///|

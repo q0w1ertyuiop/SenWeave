@@ -1,0 +1,8 @@
+import {
+  "q0w1ertyuiop/senweave",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/hex",
+  "moonbitlang/core/json",
+}
+
+pkgtype(kind: "executable")

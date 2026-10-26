@@ -72,7 +72,6 @@ pub fn parse_json(
     reject(RecordLimit, None, None, "Pack exceeds the configured record limit.")
   }
   let records = []
-  let mut base_name = ""
   for index, item in items {
     let fields = match item {
       Json::Object(fields) => fields
@@ -87,13 +86,21 @@ pub fn parse_json(
       }
     }
     let record = parse_record(fields, index, limits)
+    records.push(record)
+  }
+  validated_pack(records)
+}
+
+///|
+fn validated_pack(records : Array[Record]) -> Pack raise SenmlError {
+  let mut base_name = ""
+  for index, record in records {
     if record.base_name is Some(name) {
       base_name = name
     }
     if record.is_measurement() {
       validate_name(base_name, record.name.unwrap_or(""), index)
     }
-    records.push(record)
   }
   { records, }
 }
@@ -103,6 +110,7 @@ fn parse_record(
   fields : Map[String, Json],
   index : Int32,
   limits : ParseLimits,
+  data? : Bytes,
 ) -> Record raise SenmlError {
   if fields.length() > limits.max_fields_per_record {
     reject(
@@ -185,8 +193,13 @@ fn parse_record(
       }
     }
   } else if fields.contains("vd") {
-    let text = read_text(fields, index, "vd", limits).unwrap()
-    Some(MeasurementValue::Data(read_data(text, index)))
+    match data {
+      Some(bytes) => Some(MeasurementValue::Data(bytes))
+      None => {
+        let text = read_text(fields, index, "vd", limits).unwrap()
+        Some(MeasurementValue::Data(read_data(text, index)))
+      }
+    }
   } else {
     None
   }

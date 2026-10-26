@@ -1,4 +1,4 @@
-# 展开和输出约定 · 0.1.0-dev.3
+# 展开和输出约定 · 0.1.0-dev.4
 
 网关先展开完整数据包，再筛选、归档或转发测量。依据 [RFC 8428 §4.5–4.6](https://www.rfc-editor.org/rfc/rfc8428.html#section-4.5)，`Pack::resolve` 返回不含基字段、没有相对时间、按时间排列的 `ResolvedPack`。
 
@@ -48,4 +48,4 @@ let json = selected.to_json_string()
 
 此参数约束最终 JSON 的 UTF-16 单元上界，不是所有临时对象或整个进程的内存配额。筛选后的包仍受原展开预算约束。展开后的全名与完整 JSON 可能超过默认解析器的单字段／输入上限，接收方应按应用预算设置相应 `ParseLimits`，不能假定压缩输入和展开输出具有相同大小。
 
-输出移除全部基字段，包括默认版本的 `bver`；四种值保留对应类型，二进制重新编码为无填充 base64url。普通未知扩展在解析时已丢弃，`ignored_extension_count` 仅供消费方检查，不序列化。输出不是保留扩展的转码、数字规范化签名格式或 CBOR 实现。
+输出移除全部基字段，包括默认版本的 `bver`；四种值保留对应类型，JSON 二进制值重新编码为无填充 base64url。普通未知扩展在解析时已丢弃，`ignored_extension_count` 仅供消费方检查，不序列化。输出不保留扩展，也不作为数字规范化签名格式。`to_cbor_bytes()` 可输出相同测量的原生 CBOR 表示，数字与资源边界见 [CBOR 约定](cbor-profile.md)。

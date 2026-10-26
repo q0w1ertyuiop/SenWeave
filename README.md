@@ -4,7 +4,7 @@
 
 面向 MoonBit 物联网应用的 SenML 测量数据语义与 JSON／CBOR 交换库。
 
-**当前阶段：SenML JSON 解析、基字段展开与独立记录输出，版本 `0.1.0-dev.3`。** 提供带资源上限的解析与展开、类型化记录、四种测量值和结构化错误。CBOR 编解码和网络集成仍在开发；尚未发布到 Mooncakes。
+**当前阶段：SenML JSON／CBOR 解析、基字段展开与独立记录输出，版本 `0.1.0-dev.4`。** 提供带资源上限的解析与展开、类型化记录、四种测量值和结构化错误。已用 Python `cbor2` 验证双向 CBOR 交换；网络集成和 Mooncakes 发布尚未完成。
 
 SenML 数据包里的测量记录可以继承此前出现的设备名称、基准时间、单位和基准数值。记录从原数据包取出前，需要先应用这些信息，才能安全地独立保存或筛选。项目依据 [RFC 8428](https://www.rfc-editor.org/rfc/rfc8428.html)，为设备网关、采集服务和离线工具提供这层共享能力。
 
@@ -20,21 +20,26 @@ moon test --target js
 moon run examples/labels --target js
 moon run examples/json --target js
 moon run examples/gateway --target js
+moon run examples/cbor --target js
 ```
 
 `examples/labels` 展示标准标签映射。`examples/json` 解析包含基准设置、数值、布尔与二进制值的数据包，输出 `raw records: 4, measurements: 3`，保留 `22.50` 的数字原文，并演示拒绝未知强制扩展。
 
 `examples/gateway` 把 4 条原始记录展开为测量，筛选并按时间输出 2 条温度记录，分别为 `23` 和 `22.5`，随后逐条独立重读。调用方提供接收时刻，核心库不读取系统时钟。
 
-CI 针对 Windows、Linux 和 `native`、`js`、`wasm-gc` 三个后端运行相同测试与示例。
+`examples/cbor` 输出原始包与展开包的 CBOR 十六进制，以及展开后的 JSON。可通过 `-- --hex <十六进制>` 传入外部 CBOR 数据。
+
+CI 针对 Windows、Linux 和 `native`、`js`、`wasm-gc` 三个后端运行相同测试与示例，另运行 Python `cbor2` 互操作检查。本批本地三个后端各通过 54 个测试和双向交换检查，复现命令见 [CBOR 约定](docs/cbor-profile.md)。
 
 ## 已有接口
 
 - `parse_json(input, limits?)`：返回 `Pack`，失败抛出带诊断的 `SenmlError`。
+- `parse_cbor(input, limits?, max_input_bytes?)`：把确定长度的 CBOR 数据包读入同一个 `Pack`，复用字段校验与展开逻辑。
 - `Pack::len()`、`record(index)`、`measurement_count()`：读取原始记录和测量数量；越界索引返回 `None`。
 - `Pack::resolve(reference_time?, max_expanded_code_units?)`：应用名称、单位、时间、数值与和的基字段，返回按时间排序的 `ResolvedPack`；相对时间需要显式参考时刻。
 - `ResolvedPack::filter(predicate)`、`record(index)`、`len()`：筛选和读取独立测量；等时记录保留输入顺序，`source_index` 指向原始记录。
 - `ResolvedPack::to_json_string()`、`ResolvedRecord::to_json_string()`：输出完整数据包或单条测量组成的数组，可独立保存和转发。
+- `Pack::to_cbor_bytes()`、`ResolvedPack::to_cbor_bytes()`、`ResolvedRecord::to_cbor_bytes()`：输出原始上下文包或独立测量；可设置 `max_output_bytes`。
 - `MeasurementValue`：区分数值、文本、布尔和二进制值；零、`false`、空文本和空二进制会保留。
 - `Number::json_literal()`：读取原始数字文本；`as_double()` 提供可能舍入的 binary64 近似值。
 - `SenmlError::diagnostic()`：读取错误类别、记录索引、字段及可用的 JSON 行列位置。
@@ -49,11 +54,12 @@ CI 针对 Windows、Linux 和 `native`、`js`、`wasm-gc` 三个后端运行相�
 
 展开算术采用 binary64，可能舍入；没有加法或加零时保留数值原文。溢出、缺失相对时钟和不可表示的绝对时间会失败，展开体积默认采用 4 Mi UTF-16 单元的保守上限。使用示例、时间与数值边界见 [展开和输出约定](docs/resolution.md)。
 
+CBOR 使用标准整数标签和原生字节串，数字支持整数、浮点与输入 Tag 4。编码保留可表示的普通 64 位整数字面量，其余数字采用 binary64；JSON 的十进制原文在跨格式输出后会改变。输入类型、确定长度及数值边界见 [CBOR 约定](docs/cbor-profile.md)。
+
 ## 下一步实现
 
-1. 评估并复用现有 CBOR 包，验证整数键、二进制值和数值边界，完成 JSON／CBOR 转换。
-2. 对照更多 RFC 示例与外部 SenML 实现验证语义，补充离线检查工具与真实传输集成。
-3. 正式发布 Mooncakes 包，在独立消费项目中验证注册表安装与使用。
+1. 对照更多 RFC 示例与外部 SenML 实现验证语义，补充离线检查工具与真实传输集成。
+2. 正式发布 Mooncakes 包，在独立消费项目中验证注册表安装与使用。
 
 首版范围为 RFC 8428 的 SenML JSON／CBOR 数据包。XML、EXI、SenSML 无限流和单位换算不在首版范围内。
 
@@ -61,7 +67,7 @@ CI 针对 Windows、Linux 和 `native`、`js`、`wasm-gc` 三个后端运行相�
 
 ![当前实现与计划架构](docs/architecture.svg)
 
-核心以 MoonBit 实现，接口接收内存数据。文件、时钟、网络和界面由消费项目提供。现有 [CBOR](https://mooncakes.io/docs/2515050242/cbor)、[MQTT](https://mooncakes.io/docs/Strangelight-Merser/moon-mqtt-client) 和 [CoAP](https://mooncakes.io/docs/sujy123456/mooncoap) 包是拟集成的上下游；当前尚无第三方运行时依赖或已完成的集成。
+核心以 MoonBit 实现，接口接收内存数据。文件、时钟、网络和界面由消费项目提供。CBOR 编解码复用 [2515050242/cbor@0.1.2](https://mooncakes.io/docs/2515050242/cbor@0.1.2)，SenWeave 在其前后处理资源预检和 SenML 语义。现有 [MQTT](https://mooncakes.io/docs/Strangelight-Merser/moon-mqtt-client) 和 [CoAP](https://mooncakes.io/docs/sujy123456/mooncoap) 包仍是拟集成的传输层。
 
 检索记录与实现决策见 [开发记录](docs/development.md)。
 

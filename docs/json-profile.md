@@ -1,4 +1,4 @@
-# JSON 输入约定 · 0.1.0-dev.3
+# JSON 输入约定 · 0.1.0-dev.4
 
 `parse_json(input, limits?)` 接收已解码的 Unicode 字符串，返回类型化原始记录。所有后端使用同一实现。字节输入需由调用方严格按 UTF-8 解码；当前函数不检查原始字节来源。
 
@@ -42,4 +42,4 @@ JSON 语法与 Unicode 标量字符串由标准库处理。转义解码后重复
 
 ## 当前使用边界
 
-`parse_json` 用于类型化读取与字段校验，其返回记录仍依赖前文上下文。`resolve` 可继续执行基字段和相对时间展开，随后输出独立 JSON 测量。CBOR 和外部 SenML 实现互操作验证将在后续阶段完成；尚未发布 Mooncakes 包。
+`parse_json` 用于类型化读取与字段校验，其返回记录仍依赖前文上下文。`resolve` 可继续执行基字段和相对时间展开，随后输出独立 JSON／CBOR 测量。`parse_cbor` 进入同一模型，见 [CBOR 约定](cbor-profile.md)。已验证与 Python `cbor2` 的编码交换；外部 SenML 库的语义对照和 Mooncakes 发布尚未完成。

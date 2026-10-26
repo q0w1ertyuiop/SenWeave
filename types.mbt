@@ -1,5 +1,6 @@
 ///|
-/// A validated JSON number with its original spelling retained.
+/// A validated number represented by JSON text. JSON input retains its source
+/// spelling; CBOR input generates integer, floating-point or decimal-tag text.
 /// The Double projection can round; use json_literal() when exact source text
 /// matters. This type does not provide decimal arithmetic.
 pub struct Number {
@@ -34,7 +35,7 @@ pub(all) enum MeasurementValue {
 pub extend MeasurementValue with Debug::{to_repr}
 
 ///|
-/// A validated raw record. Base fields have NOT been applied to regular fields.
+/// A validated raw JSON/CBOR record. Bases have NOT been applied to regular fields.
 /// A base-only record updates pack context and is not a measurement.
 /// Unknown, non-mandatory extensions are ignored rather than retained.
 pub struct Record {
