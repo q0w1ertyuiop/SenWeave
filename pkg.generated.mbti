@@ -46,6 +46,11 @@ pub(all) enum ErrorCode {
   UnsupportedVersion
   InvalidName
   InvalidData
+  MissingReferenceTime
+  InvalidReferenceTime
+  ArithmeticOverflow
+  UnrepresentableTime
+  ExpansionLimit
 } derive(Eq, @debug.Debug)
 pub fn ErrorCode::equal(Self, Self) -> Bool
 pub fn ErrorCode::not_equal(Self, Self) -> Bool
@@ -97,6 +102,7 @@ pub struct Pack {
 pub fn Pack::len(Self) -> Int32
 pub fn Pack::measurement_count(Self) -> Int32
 pub fn Pack::record(Self, Int32) -> Record?
+pub fn Pack::resolve(Self, reference_time? : Double, max_expanded_code_units? : Int32) -> ResolvedPack raise SenmlError
 
 pub(all) struct ParseLimits {
   max_input_code_units : Int32
@@ -126,6 +132,27 @@ pub struct Record {
 } derive(@debug.Debug)
 pub fn Record::is_measurement(Self) -> Bool
 pub fn Record::to_repr(Self) -> @debug.Repr
+
+pub struct ResolvedPack {
+  // private fields
+}
+pub fn ResolvedPack::filter(Self, (ResolvedRecord) -> Bool) -> Self
+pub fn ResolvedPack::len(Self) -> Int32
+pub fn ResolvedPack::record(Self, Int32) -> ResolvedRecord?
+pub fn ResolvedPack::to_json_string(Self) -> String
+
+pub struct ResolvedRecord {
+  name : String
+  time : Number
+  unit : String?
+  value : MeasurementValue?
+  sum : Number?
+  update_time : Number?
+  source_index : Int32
+  ignored_extension_count : Int32
+} derive(@debug.Debug)
+pub fn ResolvedRecord::to_json_string(Self) -> String
+pub fn ResolvedRecord::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

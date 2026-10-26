@@ -25,5 +25,6 @@ jobs:
       - run: moon test --target ${{ matrix.target }}
       - run: moon run examples/labels --target ${{ matrix.target }}
       - run: moon run examples/json --target ${{ matrix.target }}
+      - run: moon run examples/gateway --target ${{ matrix.target }}
       - run: moon info --target ${{ matrix.target }}
       - run: git diff --exit-code -- '*.mbti'

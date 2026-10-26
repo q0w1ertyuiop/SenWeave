@@ -1,5 +1,5 @@
 ///|
-/// Stable categories for the bounded RFC 8428 JSON input profile.
+/// Stable categories for bounded version-10 parsing and measurement resolution.
 pub(all) enum ErrorCode {
   InvalidLimits
   InputLimit
@@ -20,6 +20,11 @@ pub(all) enum ErrorCode {
   UnsupportedVersion
   InvalidName
   InvalidData
+  MissingReferenceTime
+  InvalidReferenceTime
+  ArithmeticOverflow
+  UnrepresentableTime
+  ExpansionLimit
 } derive(Eq, Debug)
 
 ///|
