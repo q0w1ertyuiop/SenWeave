@@ -13,13 +13,26 @@ import {
 pub struct Collector {
   // private fields
 }
-pub fn Collector::new(reject_extensions? : Bool) -> Self
+pub fn Collector::new(reject_extensions? : Bool, deferred? : Bool) -> Self
+pub fn Collector::pending_count(Self) -> Int32
 pub fn Collector::poll(Self, Int64) -> Array[Event]
 pub fn Collector::receive(Self, String, Bytes, Int64, Double) -> Array[Event]
+
+pub struct Delivery {
+  // private fields
+}
+pub fn Delivery::finish(Self, stored~ : Bool, Int64) -> Array[Event]
+pub fn Delivery::id(Self) -> Int32
 
 pub(all) enum Event {
   SendDatagram(String, Bytes)
   Accepted(String, @senweave.ResolvedPack)
+  Pending(Delivery, String, @senweave.ResolvedPack)
+  Completed(Int32, String)
+  StorageFailed(Int32, String)
+  Expired(Int32, String)
+  Busy(String)
+  InvalidDelivery(Int32)
   Rejected(String, @senweave.Diagnostic)
   ProtocolError(String)
   InvalidClock

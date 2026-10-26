@@ -2,3 +2,7 @@
 /.mooncakes/
 /target/
 *.tgz
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm

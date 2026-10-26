@@ -4,12 +4,23 @@ fn main {
 }
 
 ///|
-pub fn new_collector() -> @collector.Collector {
-  @collector.Collector::new()
+pub struct Session {
+  priv collector : @collector.Collector
+  priv deliveries : Map[Int32, @collector.Delivery]
 }
 
 ///|
-fn events_json(events : Array[@collector.Event]) -> String {
+pub fn new_collector() -> Session {
+  { collector: @collector.Collector::new(), deliveries: Map([]), }
+}
+
+///|
+pub fn new_deferred_collector() -> Session {
+  { collector: @collector.Collector::new(deferred=true), deliveries: Map([]), }
+}
+
+///|
+fn events_json(session : Session, events : Array[@collector.Event]) -> String {
   Json::array(
     events.map(event => {
       match event {
@@ -24,6 +35,40 @@ fn events_json(events : Array[@collector.Event]) -> String {
             "kind": Json::string("accepted"),
             "peer": Json::string(peer),
             "json": Json::string(pack.to_json_string()),
+          })
+        @collector.Pending(delivery, peer, pack) => {
+          session.deliveries[delivery.id()] = delivery
+          Json::object({
+            "kind": Json::string("pending"),
+            "id": Json::number(delivery.id().to_double()),
+            "peer": Json::string(peer),
+            "json": Json::string(pack.to_json_string()),
+          })
+        }
+        @collector.Completed(id, peer)
+        | @collector.StorageFailed(id, peer)
+        | @collector.Expired(id, peer) => {
+          session.deliveries.remove(id)
+          let kind = match event {
+            @collector.Completed(_, _) => "completed"
+            @collector.StorageFailed(_, _) => "storage-failed"
+            _ => "expired"
+          }
+          Json::object({
+            "kind": Json::string(kind),
+            "id": Json::number(id.to_double()),
+            "peer": Json::string(peer),
+          })
+        }
+        @collector.Busy(peer) =>
+          Json::object({
+            "kind": Json::string("busy"),
+            "peer": Json::string(peer),
+          })
+        @collector.InvalidDelivery(id) =>
+          Json::object({
+            "kind": Json::string("invalid-delivery"),
+            "id": Json::number(id.to_double()),
           })
         @collector.Rejected(peer, diagnostic) =>
           Json::object({
@@ -51,30 +96,48 @@ fn monotonic_valid(value : Double) -> Bool {
 
 ///|
 pub fn receive(
-  collector : @collector.Collector,
+  session : Session,
   peer : String,
   wire_hex : String,
   monotonic_ms : Double,
   received_at : Double,
 ) -> String {
   if !monotonic_valid(monotonic_ms) {
-    return events_json([@collector.InvalidClock])
+    return events_json(session, [@collector.InvalidClock])
   }
   if wire_hex.length() > 18000 {
-    return events_json([@collector.ProtocolError(peer)])
+    return events_json(session, [@collector.ProtocolError(peer)])
   }
   let wire = @hex.decode(wire_hex) catch {
-    _ => return events_json([@collector.ProtocolError(peer)])
+    _ => return events_json(session, [@collector.ProtocolError(peer)])
   }
   events_json(
-    collector.receive(peer, wire, monotonic_ms.to_int64(), received_at),
+    session,
+    session.collector.receive(peer, wire, monotonic_ms.to_int64(), received_at),
   )
 }
 
 ///|
-pub fn poll(collector : @collector.Collector, monotonic_ms : Double) -> String {
+pub fn poll(session : Session, monotonic_ms : Double) -> String {
   if !monotonic_valid(monotonic_ms) {
-    return events_json([@collector.InvalidClock])
+    return events_json(session, [@collector.InvalidClock])
   }
-  events_json(collector.poll(monotonic_ms.to_int64()))
+  events_json(session, session.collector.poll(monotonic_ms.to_int64()))
+}
+
+///|
+pub fn finish(
+  session : Session,
+  id : Int32,
+  stored : Bool,
+  monotonic_ms : Double,
+) -> String {
+  if !monotonic_valid(monotonic_ms) {
+    return events_json(session, [@collector.InvalidClock])
+  }
+  match session.deliveries.get(id) {
+    Some(delivery) =>
+      events_json(session, delivery.finish(stored~, monotonic_ms.to_int64()))
+    None => events_json(session, [@collector.InvalidDelivery(id)])
+  }
 }

@@ -5,9 +5,10 @@ fn request(
   format~ : Int32 = 110,
   path~ : String = "ingest",
   verb~ : @protocol.Method = @protocol.Post,
+  msg_type~ : @protocol.MessageType = @protocol.Confirmable,
 ) -> Bytes {
   let message = @protocol.Message::new(
-    @protocol.Confirmable,
+    msg_type,
     @protocol.Code::request(verb),
     mid,
   )

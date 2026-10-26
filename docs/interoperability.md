@@ -1,4 +1,4 @@
-# 已验证的互操作范围 · 0.1.0-dev.6
+# 已验证的互操作范围 · 0.1.0-dev.7
 
 这份记录区分通用 CBOR 编码交换与外部 SenML 库的语义交换。测试使用未修改的已发布版本，公共脚本保留实际断言。
 
@@ -50,8 +50,11 @@ python scripts/check_senml_interop.py
 moon build cmd/coapbridge --target js --release
 python -m pip install cbor2==5.7.1 aiocoap==0.4.14
 python scripts/check_coap_interop.py
+python scripts/check_coap_interop.py --storage
 ```
 
 共 7 次请求：JSON 基值／相对时间与 CBOR 字节串成功接收，缺失格式、错误格式、未知路径、无效 UTF-8、未知普通扩展被拒绝。断言核对 `2.04`／`4.00`／`4.04`／`4.15` 响应及两包完整测量的名称、时刻、数值和二进制数据。另有 Node UDP 测试通过独立构造的报文和 ACK 字节检查重传去重，纯协议逻辑测试覆盖 MID 过期复用与时钟回退。接口和边界见 [传输接入](transport.md)。
+
+`--storage` 在独立临时 SQLite 文件中重跑相同 7 次交换。确认型成功请求先收到空 ACK，宿主提交后由 MoonCoAP 发送独立响应，aiocoap 完成匹配与 ACK；脚本在成功响应后用独立 SQLite 连接读取两包完整内容。两种模式共 14 次请求，均已运行。Node 测试另外验证数据库锁定和行配额返回 `5.00`、已有账本重开、重复报文不重复落库，以及拒绝其他应用数据库时字节不变。
 
 这些测试不覆盖公网、DTLS、真实硬件设备、丢包压力或跨重启幂等。[absmach/senml](https://github.com/absmach/senml) 已阅读其展开实现，尚未运行；更多版本与 RFC 全部示例需要后续覆盖。

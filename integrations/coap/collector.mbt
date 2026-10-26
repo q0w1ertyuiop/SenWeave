@@ -4,6 +4,12 @@
 pub(all) enum Event {
   SendDatagram(String, Bytes)
   Accepted(String, @senweave.ResolvedPack)
+  Pending(Delivery, String, @senweave.ResolvedPack)
+  Completed(Int32, String)
+  StorageFailed(Int32, String)
+  Expired(Int32, String)
+  Busy(String)
+  InvalidDelivery(Int32)
   Rejected(String, @senweave.Diagnostic)
   ProtocolError(String)
   InvalidClock
@@ -14,10 +20,15 @@ pub(all) enum Event {
 pub struct Collector {
   priv endpoint : @protocol.Endpoint
   priv reject_extensions : Bool
+  priv deferred : Bool
+  priv pending : Map[Int32, PendingRequest]
 }
 
 ///|
-pub fn Collector::new(reject_extensions~ : Bool = true) -> Collector {
+pub fn Collector::new(
+  reject_extensions~ : Bool = true,
+  deferred~ : Bool = false,
+) -> Collector {
   let defaults = @protocol.Config::default()
   let limits = { ..defaults.limits, max_datagram: 9000, max_payload: 8192, }
   let config = {
@@ -30,7 +41,12 @@ pub fn Collector::new(reject_extensions~ : Bool = true) -> Collector {
     max_queue: 16,
     max_actions: 128,
   }
-  { endpoint: @protocol.Endpoint::new(config).unwrap(), reject_extensions, }
+  {
+    endpoint: @protocol.Endpoint::new(config).unwrap(),
+    reject_extensions,
+    deferred,
+    pending: Map([]),
+  }
 }
 
 ///|
@@ -60,7 +76,10 @@ pub fn Collector::receive(
     return [InvalidClock]
   }
   let events = []
-  match self.endpoint.receive_request(peer, datagram, monotonic_ms) {
+  if !self.advance(monotonic_ms, events) {
+    return events
+  }
+  match self.endpoint.receive(peer, datagram, monotonic_ms) {
     Err(@protocol.Clock(_)) => events.push(InvalidClock)
     Err(_) => events.push(ProtocolError(peer))
     Ok(_) => ()
@@ -92,18 +111,41 @@ pub fn Collector::receive(
                   reject_extensions=self.reject_extensions,
                 )
                 let pack = raw.resolve(reference_time=received_at)
-                let reply = @protocol.Response::{
-                  code: { value: 68, },
-                  options: [],
-                  payload: b"",
-                }
-                if self.endpoint.respond(request.id, reply, monotonic_ms, 0)
-                  is Ok(_) {
-                  events.push(Accepted(peer, pack))
+                if self.deferred {
+                  if self.pending.length() >= 16 {
+                    events.push(Busy(peer))
+                    @protocol.Response::error(163)
+                  } else {
+                    if message.msg_type == @protocol.Confirmable &&
+                      self.endpoint.acknowledge(request.id, monotonic_ms)
+                      is Err(_) {
+                      events.push(ProtocolError(peer))
+                      continue
+                    }
+                    self.pending[request.id] = {
+                      peer,
+                      deadline: monotonic_ms + 30000L,
+                    }
+                    append_sends(events, self.endpoint.drain())
+                    events.push(
+                      Pending({ collector: self, id: request.id, }, peer, pack),
+                    )
+                    continue
+                  }
                 } else {
-                  events.push(ProtocolError(peer))
+                  let reply = @protocol.Response::{
+                    code: { value: 68, },
+                    options: [],
+                    payload: b"",
+                  }
+                  if self.endpoint.respond(request.id, reply, monotonic_ms, 0)
+                    is Ok(_) {
+                    events.push(Accepted(peer, pack))
+                  } else {
+                    events.push(ProtocolError(peer))
+                  }
+                  continue
                 }
-                continue
               } catch {
                 error => {
                   let diagnostic = error.diagnostic()
@@ -135,11 +177,6 @@ pub fn Collector::receive(
 /// Expire deduplication records even when no new datagrams arrive.
 pub fn Collector::poll(self : Collector, monotonic_ms : Int64) -> Array[Event] {
   let events = []
-  match self.endpoint.poll(monotonic_ms) {
-    Err(@protocol.Clock(_)) => events.push(InvalidClock)
-    Err(_) => events.push(ProtocolError(""))
-    Ok(_) => ()
-  }
-  append_sends(events, self.endpoint.drain())
+  let _ = self.advance(monotonic_ms, events)
   events
 }

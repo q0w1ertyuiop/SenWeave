@@ -4,7 +4,7 @@
 
 面向 MoonBit 物联网应用的 SenML 测量数据语义与 JSON／CBOR 交换库。
 
-**当前阶段：SenML JSON／CBOR 库、离线工具与 CoAP 采集适配器，版本 `0.1.0-dev.6`。** 支持带资源上限的字节解析、基字段展开、筛选、独立记录输出，以及文件／管道检查和转换。CoAP 已完成本机 UDP 收发和 aiocoap 客户端验证；Mooncakes 正式发布和 MQTT 集成尚未完成。
+**当前阶段：SenML JSON／CBOR 库、离线工具与 CoAP 采集适配器，版本 `0.1.0-dev.7`。** 支持带资源上限的字节解析、基字段展开、筛选、独立记录输出，以及文件／管道检查和转换。CoAP 支持延迟到宿主存储完成后应答，已通过本机 UDP、SQLite 事务及 aiocoap 客户端验证；Mooncakes 正式发布和 MQTT 集成尚未完成。
 
 SenML 数据包里的测量记录可以继承此前出现的设备名称、基准时间、单位和基准数值。记录从原数据包取出前，需要先应用这些信息，才能安全地独立保存或筛选。项目依据 [RFC 8428](https://www.rfc-editor.org/rfc/rfc8428.html)，为设备网关、采集服务和离线工具提供这层共享能力。
 
@@ -82,6 +82,14 @@ node examples/coap/collector.mjs --port 0 --duration-ms 10000
 ```
 
 示例绑定 `127.0.0.1` 的临时 UDP 端口，启动行显示端口号，10 秒后退出。单调毫秒用于 CoAP 超时，接收时的 POSIX 秒用于相对测量时间。`Accepted` 表示解析与展开通过，持久化由调用方完成。接口、8 KiB 负载上限、去重范围和独立客户端复现见 [传输接入](docs/transport.md)。
+
+需要落库后再确认时，使用 `Collector::new(deferred=true)`。`Pending` 事件给出绑定当前采集器的 `Delivery`，宿主提交存储后调用 `finish(stored=true, monotonic_ms)`；失败则传入 `false`。待处理最多 16 项，30 秒超时，重复或过期句柄不会生成成功响应。
+
+```sh
+node examples/coap/collector.mjs --port 0 --duration-ms 10000 --store measurements.sqlite
+```
+
+`--store` 使用 Node.js 内置 SQLite 保存独立测量文本，事务提交后才返回 `2.04`，锁冲突或配额失败返回 `5.00`。现有非 SenWeave 数据库会被拒绝。数据库配置和跨重启去重边界见 [存储后应答说明](docs/transport.md#存储后应答)。
 
 ## 下一步实现
 

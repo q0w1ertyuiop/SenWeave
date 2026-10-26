@@ -4,13 +4,15 @@ import { performance } from 'node:perf_hooks';
 
 // This finite loopback demonstration has no external service or credentials.
 const args = process.argv.slice(2);
-let port = 0, duration = 10_000, reference;
+let port = 0, duration = 10_000, reference, storePath;
 try {
   const seen = new Set();
   for (let i = 0; i < args.length; i += 2) {
     const flag = args[i], text = args[i + 1];
-    if (!['--port', '--duration-ms', '--now'].includes(flag) || seen.has(flag) || !text || !/^\d+(?:\.\d+)?$/.test(text)) throw new Error('options');
+    if (!['--port', '--duration-ms', '--now', '--store'].includes(flag) || seen.has(flag) || !text) throw new Error('options');
     seen.add(flag);
+    if (flag === '--store') { storePath = text; continue; }
+    if (!/^\d+(?:\.\d+)?$/.test(text)) throw new Error('number');
     const value = Number(text);
     if (!Number.isFinite(value)) throw new Error('number');
     if (flag === '--port') { if (!Number.isInteger(value) || value > 65535) throw new Error('port'); port = value; }
@@ -18,20 +20,26 @@ try {
     if (flag === '--now') { if (value < 268435456) throw new Error('clock'); reference = value; }
   }
 } catch {
-  process.stderr.write('Usage: node examples/coap/collector.mjs [--port 0..65535] [--duration-ms 100..60000] [--now POSIX_SECONDS]\n');
+  process.stderr.write('Usage: node examples/coap/collector.mjs [--port 0..65535] [--duration-ms 100..60000] [--now POSIX_SECONDS] [--store LEDGER.sqlite]\n');
   process.exit(2);
 }
 
 let core;
 try { core = createRequire(import.meta.url)('../../_build/js/release/build/cmd/coapbridge/coapbridge.js'); }
 catch { process.stderr.write('Build first: moon build cmd/coapbridge --target js --release\n'); process.exit(2); }
-const collector = core.new_collector();
+let store;
+if (storePath !== undefined) {
+  try { store = (await import('./sqlite-store.mjs')).openStore(storePath); }
+  catch { process.stderr.write('StorageOpen: could not open a SenWeave ledger\n'); process.exit(2); }
+}
+const collector = store ? core.new_deferred_collector() : core.new_collector();
 const socket = createSocket('udp4');
 let closed = false, pending = 0;
 let pollTimer, stopTimer;
 function stop() {
   if (closed) return;
   closed = true; clearInterval(pollTimer); clearTimeout(stopTimer);
+  store?.close();
   try { socket.close(); } catch { /* The socket may have failed before binding. */ }
 }
 function emit(event) {
@@ -42,6 +50,13 @@ function emit(event) {
 function handle(events) {
   for (const event of events) {
     if (closed) break;
+    if (event.kind === 'pending') {
+      let stored = false;
+      try { store.append(event.peer, reference ?? Date.now() / 1000, event.json); stored = true; }
+      catch { /* A storage failure becomes a 5.00 response, never 2.04. */ }
+      handle(JSON.parse(core.finish(collector, event.id, stored, Math.floor(performance.now()))));
+      continue;
+    }
     if (event.kind !== 'send') { emit(event); continue; }
     if (pending >= 32) { process.exitCode = 1; stop(); break; }
     const separator = event.peer.lastIndexOf(':');

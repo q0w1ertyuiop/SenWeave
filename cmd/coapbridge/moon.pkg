@@ -7,6 +7,15 @@ pkgtype(kind: "executable")
 
 options(
   link: {
-    "js": { "exports": [ "new_collector", "receive", "poll" ], "format": "cjs" },
+    "js": {
+      "exports": [
+        "new_collector",
+        "new_deferred_collector",
+        "receive",
+        "poll",
+        "finish",
+      ],
+      "format": "cjs",
+    },
   },
 )

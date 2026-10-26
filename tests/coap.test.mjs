@@ -5,11 +5,15 @@ import { createSocket } from 'node:dgram';
 import { createInterface } from 'node:readline';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { DatabaseSync } from 'node:sqlite';
 
 const script = fileURLToPath(new URL('../examples/coap/collector.mjs', import.meta.url));
 
-async function start(t, duration = '3000') {
-  const child = spawn(process.execPath, [script, '--duration-ms', duration, '--now', '1793000000']);
+async function start(t, duration = '3000', extra = []) {
+  const child = spawn(process.execPath, [script, '--duration-ms', duration, '--now', '1793000000', ...extra]);
   const events = [];
   const lines = createInterface({ input: child.stdout });
   let errors = '';
@@ -68,6 +72,114 @@ test('loopback UDP accepts JSON and CBOR and deduplicates retransmission', async
   assert.equal(accepted.length, 2);
   assert.deepEqual(JSON.parse(accepted[0].json), [{ n: 'sensor:t', t: 1792999997, v: 22.5 }]);
   assert.deepEqual(JSON.parse(accepted[1].json), [{ n: 'blob', t: 1793000000, vd: 'AP8' }]);
+});
+
+async function stop(child) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  const exited = once(child, 'exit');
+  child.kill();
+  await exited;
+}
+
+function temporaryLedger() {
+  const directory = mkdtempSync(join(tmpdir(), 'senweave-coap-'));
+  return {
+    path: join(directory, 'measurements.sqlite'),
+    cleanup() {
+      assert.equal(dirname(resolve(directory)), resolve(tmpdir()));
+      rmSync(directory, { recursive: true, force: true });
+    },
+  };
+}
+
+async function separateExchange(socket, port, wire) {
+  const messages = [];
+  function collect(message) { messages.push(message); }
+  socket.on('message', collect);
+  try {
+    socket.send(wire, port, '127.0.0.1');
+    const deadline = Date.now() + 2000;
+    while (!messages.some(message => message[1] !== 0)) {
+      if (Date.now() >= deadline) throw new Error('No separate response');
+      await new Promise(resolve => setTimeout(resolve, 5));
+    }
+    const reply = messages.find(message => message[1] !== 0);
+    // ACK the separate CON response using its own MID, not the request MID.
+    socket.send(Buffer.from([0x60, 0, reply[2], reply[3]]), port, '127.0.0.1');
+    assert.deepEqual(messages[0], Buffer.from([0x60, 0, wire[2], wire[3]]));
+    assert.equal(reply[0] >> 4 & 3, 0);
+    assert.equal(reply[4], wire[4]);
+    return reply;
+  } finally { socket.off('message', collect); }
+}
+
+test('SQLite commits exact measurement text before 2.04, deduplicates live requests and reopens its ledger', async t => {
+  const ledger = temporaryLedger();
+  let server;
+  try {
+    server = await start(t, '5000', ['--store', ledger.path]);
+    const socket = await client(t);
+    const wire = packet(40, '[{"n":"counter","v":9007199254740993}]');
+    assert.equal((await separateExchange(socket, server.port, wire))[1], 68);
+    let database = new DatabaseSync(ledger.path, { readOnly: true });
+    assert.equal(database.prepare('SELECT senml_json FROM measurements').get().senml_json,
+      '[{"n":"counter","t":1793000000,"v":9007199254740993}]');
+    database.close();
+    assert.equal((await exchange(socket, server.port, wire))[1], 0);
+    await stop(server.child);
+    server = await start(t, '5000', ['--store', ledger.path]);
+    assert.equal((await separateExchange(socket, server.port, packet(41, '[{"n":"second","v":2}]')))[1], 68);
+    database = new DatabaseSync(ledger.path, { readOnly: true });
+    assert.equal(database.prepare('SELECT count(*) AS count FROM measurements').get().count, 2);
+    database.close();
+  } finally { if (server) await stop(server.child); ledger.cleanup(); }
+});
+
+test('SQLite lock failure returns 5.00 without data and a later new request succeeds', async t => {
+  const ledger = temporaryLedger();
+  let server, database;
+  try {
+    server = await start(t, '5000', ['--store', ledger.path]);
+    const socket = await client(t);
+    database = new DatabaseSync(ledger.path);
+    database.exec('BEGIN IMMEDIATE');
+    assert.equal((await separateExchange(socket, server.port, packet(50, '[{"n":"locked","v":1}]')))[1], 160);
+    assert.equal(database.prepare('SELECT count(*) AS count FROM measurements').get().count, 0);
+    database.exec('ROLLBACK');
+    assert.equal((await separateExchange(socket, server.port, packet(51, '[{"n":"ready","v":1}]')))[1], 68);
+    assert.equal(database.prepare('SELECT count(*) AS count FROM measurements').get().count, 1);
+  } finally { database?.close(); if (server) await stop(server.child); ledger.cleanup(); }
+});
+
+test('storage mode refuses unrelated databases and in-memory paths before binding', () => {
+  const ledger = temporaryLedger();
+  try {
+    const database = new DatabaseSync(ledger.path);
+    database.exec('CREATE TABLE unrelated(value TEXT); INSERT INTO unrelated VALUES (\'keep\')');
+    database.close();
+    const original = readFileSync(ledger.path);
+    for (const path of [ledger.path, ':memory:']) {
+      const result = spawnSync(process.execPath, [script, '--store', path], { encoding: 'utf8', timeout: 3000 });
+      assert.equal(result.status, 2);
+      assert.equal(result.stdout, '');
+      assert.match(result.stderr, /StorageOpen/);
+    }
+    assert.deepEqual(readFileSync(ledger.path), original);
+  } finally { ledger.cleanup(); }
+});
+
+test('SQLite row quota rejects new storage with 5.00 and preserves existing measurements', async t => {
+  const ledger = temporaryLedger();
+  let server, database;
+  try {
+    server = await start(t, '5000', ['--store', ledger.path]);
+    database = new DatabaseSync(ledger.path);
+    database.exec(`WITH RECURSIVE numbers(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM numbers WHERE n < 4096)
+      INSERT INTO measurements(peer, received_at, senml_json) SELECT 'seed', 1793000000, '[]' FROM numbers`);
+    const socket = await client(t);
+    assert.equal((await separateExchange(socket, server.port, packet(60, '[{"n":"full","v":1}]')))[1], 160);
+    assert.equal(database.prepare('SELECT count(*) AS count FROM measurements').get().count, 4096);
+  } finally { database?.close(); if (server) await stop(server.child); ledger.cleanup(); }
 });
 
 test('loopback UDP rejects wrong metadata invalid UTF-8 and extension loss', async t => {
