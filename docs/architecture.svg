@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="772" viewBox="0 0 1120 772" role="img" aria-labelledby="title desc">
   <title id="title">SenWeave implementation and planned architecture</title>
-  <desc id="desc">Implemented: bounded JSON and CBOR byte ingress, resolution and standalone output. MoonCoAP supplies exchanges and duplicate response replay. Deferred delivery and business identity let the host report a committed, duplicate or conflicting request. A Node.js loopback UDP host persists original payload and identity in a SQLite example sink, tested across restart and with aiocoap. MQTT and registry publication remain planned.</desc>
+  <desc id="desc">Implemented: bounded JSON and CBOR byte ingress, resolution and standalone output. A typed Node.js SDK bundles the MoonBit core; real npm and MoonBit archives are checked in independent consumers. MoonCoAP supplies exchanges and duplicate response replay. Deferred delivery and business identity let the host report committed, duplicate or conflicting requests. A Node.js loopback UDP host persists identity in a SQLite example sink. MQTT and registry publication remain planned.</desc>
   <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9" fill="#758397"/></marker></defs>
   <rect width="1120" height="772" rx="20" fill="#f5f8fc"/>
   <g font-family="Segoe UI,Arial,sans-serif">
@@ -27,8 +27,8 @@
     </g>
     <g stroke="#758397" stroke-width="2" marker-end="url(#arrow)"><path d="M268 295h32"/><path d="M538 295h32"/><path d="M808 295h32"/></g>
     <rect x="42" y="398" width="1036" height="64" rx="12" fill="#e0f6ef" stroke="#14775d" stroke-width="2"/>
-    <text x="64" y="424" font-size="15" font-weight="600" fill="#145742">Node.js CLI · check / resolve · MoonBit semantic core</text>
-    <text x="64" y="448" font-size="14" fill="#145742">Bounded files / stdin · Strict UTF-8 · Explicit clock · Exclusive new-file output · JSON / CBOR exchange</text>
+    <text x="64" y="424" font-size="15" font-weight="600" fill="#145742">Node.js CLI + SDK · check / resolve · Compiled MoonBit semantic core</text>
+    <text x="64" y="448" font-size="14" fill="#145742">Files / pipes or typed ESM API · Opaque numeric text · Real archives checked in independent consumers</text>
     <rect x="42" y="486" width="1036" height="74" rx="12" fill="#e0f6ef" stroke="#14775d" stroke-width="2"/>
     <text x="64" y="514" font-size="15" font-weight="600" fill="#145742">MoonCoAP collector · POST /ingest · JSON 110 / CBOR 112</text>
     <text x="64" y="541" font-size="14" fill="#145742">Separate clocks · Bounded deduplication · ACK replay · Node.js loopback UDP · Independent aiocoap peer</text>

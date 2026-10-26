@@ -235,8 +235,13 @@ test('two collectors sharing a ledger cannot commit the same business key twice'
     servers.push(await start(t, '5000', ['--store', ledger.path]));
     const request = { payload: Buffer.from('[{"n":"shared","v":1}]'), source: 'shared', key: 'one' };
     const results = await Promise.all(servers.map(server => sendMeasurement({ ...request, port: server.port })));
-    assert.equal(results.some(result => result.code === 68), true);
-    assert.equal(results.every(result => [68, 160].includes(result.code)), true);
+    // A zero-wait SQLite sink guarantees no duplicate commit; it does not
+    // guarantee first-attempt success under competing locks. Check safety
+    // before retrying, then require successful recovery from both collectors.
+    assert.equal(results.every(result => [68, 160].includes(result.code)), true, JSON.stringify(results));
+    database = new DatabaseSync(ledger.path, { readOnly: true });
+    assert.equal(database.prepare('SELECT count(*) AS count FROM measurements').get().count <= 1, true);
+    database.close(); database = undefined;
     for (const server of servers) assert.equal((await sendMeasurement({ ...request, port: server.port, mid: 11 })).code, 68);
     database = new DatabaseSync(ledger.path, { readOnly: true });
     assert.equal(database.prepare('SELECT count(*) AS count FROM measurements').get().count, 1);

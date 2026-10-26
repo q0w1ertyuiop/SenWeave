@@ -68,3 +68,25 @@ jobs:
       - run: moon build cmd/bridge cmd/coapbridge --target js --release --deny-warn
       - run: node --test tests/cli.test.mjs tests/coap.test.mjs
       - run: node examples/coap/retry-demo.mjs
+
+  distribution:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: hustcer/setup-moonbit@v1
+      - run: moon update
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build
+      - run: npm run test:sdk
+      - run: npm run verify:package
+      - run: python scripts/check_moon_package.py

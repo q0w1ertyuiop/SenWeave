@@ -1,6 +1,8 @@
 /_build/
 /.mooncakes/
 /target/
+/dist/
+/node_modules/
 *.tgz
 *.sqlite
 *.sqlite-journal

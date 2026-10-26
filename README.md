@@ -4,7 +4,7 @@
 
 面向 MoonBit 物联网应用的 SenML 测量数据语义与 JSON／CBOR 交换库。
 
-**当前阶段：SenML JSON／CBOR 库、离线工具与 CoAP 采集适配器，版本 `0.1.0-dev.8`。** 支持带资源上限的字节解析、基字段展开、筛选、独立记录输出，以及文件／管道检查和转换。CoAP 支持存储后应答和可选业务键；SQLite 示例可在进程重启后识别相同负载的重试，并拒绝同键冲突。Mooncakes 正式发布和 MQTT 集成尚未完成。
+**当前阶段：SenML JSON／CBOR 库、Node.js SDK、离线工具与 CoAP 采集适配器，版本 `0.1.0-dev.9`。** 支持带资源上限的解析、基字段展开、独立记录输出及存储后应答。业务键可识别跨重启重试并拒绝负载冲突。npm 本地压缩包已通过独立运行与 TypeScript 消费验证，MoonBit 源码归档已通过三个后端的独立模块验证；注册表正式发布和 MQTT 集成尚未完成。
 
 SenML 数据包里的测量记录可以继承此前出现的设备名称、基准时间、单位和基准数值。记录从原数据包取出前，需要先应用这些信息，才能安全地独立保存或筛选。项目依据 [RFC 8428](https://www.rfc-editor.org/rfc/rfc8428.html)，为设备网关、采集服务和离线工具提供这层共享能力。
 
@@ -31,6 +31,29 @@ moon run examples/cbor --target js
 `examples/cbor` 输出原始包与展开包的 CBOR 十六进制，以及展开后的 JSON。可通过 `-- --hex <十六进制>` 传入外部 CBOR 数据。
 
 CI 针对 Windows、Linux 和 `native`、`js`、`wasm-gc` 三个后端运行相同测试与示例，另设两平台 CLI／UDP 检查与 Python 互操作任务。测试范围与复现命令见 [离线工具](docs/cli.md)、[传输接入](docs/transport.md) 和 [互操作范围](docs/interoperability.md)。
+
+## 在 Node.js 应用中调用
+
+从源码构建后可通过 ESM 调用，输入使用 JSON 原文或字节，测量数字不先转成 JavaScript `Number`：
+
+```sh
+npm ci --ignore-scripts --no-audit --no-fund
+npm run build
+npm run test:sdk
+npm run verify:package
+```
+
+```js
+import { check, resolve } from './js/index.mjs';
+
+const input = '[{"bn":"sensor:","bt":1793000000},{"n":"counter","v":9007199254740993}]';
+const summary = check(input);
+const cbor = resolve(input, { to: 'cbor' });
+const json = resolve(cbor.data, { from: 'cbor' });
+console.log(summary.measurements, json.data);
+```
+
+`check` 验证完整展开，`resolve` 返回 JSON 文本或 CBOR 字节及扩展丢弃数量。`SenWeaveError` 提供固定诊断；相对时间需要显式 `referenceTime`。SDK 随本地 `.tgz` 携带编译后的 MoonBit 核心，消费项目只需 Node.js，无额外 npm 运行时依赖。接口、类型和边界见 [SDK 说明](docs/js-sdk.md)，两种归档的消费检查见 [分发验证](docs/distribution.md)。
 
 ## 检查实际数据文件
 
