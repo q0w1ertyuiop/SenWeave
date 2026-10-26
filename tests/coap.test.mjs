@@ -76,6 +76,31 @@ test('loopback UDP accepts JSON and CBOR and deduplicates retransmission', async
   assert.deepEqual(JSON.parse(accepted[1].json), [{ n: 'blob', t: 1793000000, vd: 'AP8' }]);
 });
 
+test('a dropped success reply recovers through request retransmission without duplicate ingestion', { timeout: 10000 }, async t => {
+  const server = await start(t, '10000');
+  const relay = await client(t);
+  let destination, dropped = false;
+  const requests = [];
+  relay.on('message', (wire, remote) => {
+    if (remote.port === server.port) {
+      if (!dropped) { dropped = true; return; }
+      relay.send(wire, destination.port, destination.address);
+    } else {
+      destination = remote;
+      requests.push(Buffer.from(wire));
+      relay.send(wire, server.port, '127.0.0.1');
+    }
+  });
+  const result = await sendMeasurement({ port: relay.address().port, payload: Buffer.from('[{"n":"x","v":9007199254740993}]'), timeout: 8000 });
+  assert.equal(result.code, 68);
+  assert.equal(result.attempts, 2);
+  assert.deepEqual(requests[0], requests[1]);
+  const deadline = Date.now() + 1000;
+  while (!server.events.some(event => event.kind === 'accepted') && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(server.events.filter(event => event.kind === 'accepted').length, 1);
+  assert.equal(server.events.find(event => event.kind === 'accepted').json.includes('9007199254740993'), true);
+});
+
 async function stop(child) {
   if (child.exitCode !== null || child.signalCode !== null) return;
   const exited = once(child, 'exit');

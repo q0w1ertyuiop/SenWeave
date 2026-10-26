@@ -115,10 +115,12 @@ node examples/coap/collector.mjs --port 0 --duration-ms 10000
 只绑定 `127.0.0.1` IPv4，启动行输出实际端口。`--port` 可指定 0–65535；`--duration-ms` 为 100–60000。默认读取每次接收时的系统 POSIX 秒，`--now 1793000000` 可固定测试时间。输出为 JSON 行，测量位于 `accepted` 事件的 `json` 字符串中；宿主没有重新解析测量数字。标准输出积压预算为 1 MiB，待发送报文最多 32 项，超过预算退出。
 
 ```sh
-node --test tests/coap.test.mjs
+node --test tests/coap.test.mjs tests/coap-client.test.mjs
 python -m pip install cbor2==5.7.1 aiocoap==0.4.14
 python scripts/check_coap_interop.py
 python scripts/check_coap_interop.py --storage
 ```
 
 Node 测试通过真实 UDP 检查 JSON／CBOR、独立 ACK 字节、重复报文只验收一次、路由与格式错误、无效 UTF-8、扩展丢弃政策、SQLite 提交／拒绝和有限运行时间。Python 3.10 及以上的独立 aiocoap 客户端在默认模式执行 7 次、存储模式执行 11 次请求；后者包括同键重试、负载冲突和缺失来源拒绝，最终独立读回 3 包。CoAP 纯逻辑在 native、JS、wasm-gc 测试；套接字示例目前只有 Node.js 实现，尚未接入 MoonCoAP 的 native UDP 驱动或 MQTT 客户端。
+
+设备侧发送适配器、默认重传间隔、取消和丢包验证见 [CoAP 发送说明](coap-sender.md)。

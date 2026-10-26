@@ -61,6 +61,40 @@ pub(all) enum Event {
   InvalidClock
 }
 
+pub struct Sender {
+  // private fields
+}
+pub fn Sender::cancel(Self, Int64) -> Array[SenderEvent]
+pub fn Sender::is_pending(Self) -> Bool
+pub fn Sender::new(String, Int64, initial_mid? : Int32, response_timeout_ms? : Int64) -> Result[Self, SenderFailure]
+pub fn Sender::next_deadline(Self) -> Int64?
+pub fn Sender::poll(Self, Int64) -> Array[SenderEvent]
+pub fn Sender::receive(Self, String, Bytes, Int64) -> Array[SenderEvent]
+pub fn Sender::send(Self, Bytes, @senweave.Format, Int64, Int32, business_key? : BusinessKey) -> Array[SenderEvent]
+
+pub(all) enum SenderEvent {
+  Transmit(Bytes)
+  Acknowledged(Int32)
+  Received(Int32, Int32, Bytes)
+  Failed(Int32, SenderFailure)
+  Cancelled(Int32)
+  Rejected(SenderFailure)
+  IgnoredDatagram
+}
+
+pub(all) enum SenderFailure {
+  InvalidConfig
+  InvalidRequest
+  InvalidPayload(@senweave.Diagnostic)
+  Busy
+  Clock
+  Capacity
+  TimedOut
+  ResetByPeer
+  Protocol
+} derive(@debug.Debug)
+pub fn SenderFailure::to_repr(Self) -> @debug.Repr
+
 // Type aliases
 
 // Traits

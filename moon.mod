@@ -1,6 +1,6 @@
 name = "q0w1ertyuiop/senweave"
 
-version = "0.1.0-dev.10"
+version = "0.1.0-dev.11"
 
 license = "Apache-2.0"
 

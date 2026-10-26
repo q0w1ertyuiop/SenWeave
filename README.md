@@ -4,7 +4,7 @@
 
 面向 MoonBit 物联网应用的 SenML 测量数据语义与 JSON／CBOR 交换库。
 
-**当前阶段：SenML JSON／CBOR 库、Node.js SDK、离线工具与 CoAP 采集适配器，版本 `0.1.0-dev.10`。** 支持带资源上限的解析、基字段展开、独立记录输出及存储后应答。业务键可识别跨重启重试并拒绝负载冲突。npm 本地压缩包已通过独立运行与 TypeScript 消费验证，MoonBit 源码归档已通过三个后端的独立模块验证；注册表正式发布和 MQTT 集成尚未完成。
+**当前阶段：SenML JSON／CBOR 库、Node.js SDK、离线工具与 CoAP 收发适配器，版本 `0.1.0-dev.11`。** 支持带资源上限的解析、基字段展开、独立记录输出及存储后应答。业务键可识别跨重启重试并拒绝负载冲突。npm 本地压缩包已通过独立运行与 TypeScript 消费验证，MoonBit 源码归档已通过三个后端的独立模块验证；注册表正式发布和 MQTT 集成尚未完成。
 
 SenML 数据包里的测量记录可以继承此前出现的设备名称、基准时间、单位和基准数值。记录从原数据包取出前，需要先应用这些信息，才能安全地独立保存或筛选。项目依据 [RFC 8428](https://www.rfc-editor.org/rfc/rfc8428.html)，为设备网关、采集服务和离线工具提供这层共享能力。
 
@@ -97,7 +97,7 @@ node bin/senweave.mjs resolve examples/data/gateway.json --now 1793000000 --to c
 
 CBOR 使用标准整数标签和原生字节串，数字支持整数、浮点与输入 Tag 4。编码保留可表示的普通 64 位整数字面量，其余数字采用 binary64；JSON 的十进制原文在跨格式输出后会改变。输入类型、确定长度及数值边界见 [CBOR 约定](docs/cbor-profile.md)。
 
-## 接收 CoAP 测量
+## 接收与发送 CoAP 测量
 
 `integrations/coap` 接收 `POST /ingest`，只支持 Content-Format `110`（SenML JSON）和 `112`（SenML CBOR）。协议层复用 MoonCoAP；适配器解析并展开测量，返回待发送报文和验收事件。相同对端的重复报文在交换生存期内重发缓存响应，不重复输出测量。
 
@@ -125,6 +125,8 @@ node examples/coap/retry-demo.mjs
 ```
 
 演示操作、四个检查点与讲解材料见 [三分钟演示](docs/demo.md)。
+
+设备侧可复用纯 MoonBit `Sender`，由 MoonCoAP 处理请求重传、MID／Token 关联和独立响应 ACK，宿主提供套接字、单调时钟与随机源。Node.js 示例支持取消和单次截止时间，真实 UDP 检查覆盖请求与回复丢失。接口、预算与超时后的业务重试见 [CoAP 发送说明](docs/coap-sender.md)。
 
 ## 下一步实现
 

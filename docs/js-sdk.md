@@ -1,4 +1,4 @@
-# Node.js SDK · 0.1.0-dev.10
+# Node.js SDK · 0.1.0-dev.11
 
 SDK 为 Node.js 24 及以上提供 ESM 接口和 TypeScript 声明，解析、校验、展开和编码由编译后的 MoonBit 实现完成。宿主传递 JSON 原文或 `Uint8Array`，测量数值不会先经 JavaScript 对象转换。当前接口面向 Node.js，浏览器构建尚未提供。
 
@@ -14,10 +14,10 @@ npm run test:sdk
 npm run verify:package
 ```
 
-最后一条命令重新构建并打包，生成 `_build/npm/q0w1ertyuiop-senweave-0.1.0-dev.10.tgz`，随后在临时项目中离线安装该文件并验证运行与类型。将 `.tgz` 复制到自己的应用目录后：
+最后一条命令重新构建并打包，生成 `_build/npm/q0w1ertyuiop-senweave-0.1.0-dev.11.tgz`，随后在临时项目中离线安装该文件并验证运行与类型。将 `.tgz` 复制到自己的应用目录后：
 
 ```sh
-npm install ./q0w1ertyuiop-senweave-0.1.0-dev.10.tgz
+npm install ./q0w1ertyuiop-senweave-0.1.0-dev.11.tgz
 ```
 
 应用通过 `import { check, resolve, SenWeaveError } from '@q0w1ertyuiop/senweave'` 使用。分发包已经包含编译后的核心和必要许可，运行时无需 MoonBit、TypeScript 或额外 npm 包。当前验证针对本地压缩包，npm／Mooncakes 注册表正式发布仍待完成。

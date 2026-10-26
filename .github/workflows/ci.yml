@@ -66,7 +66,7 @@ jobs:
       - uses: hustcer/setup-moonbit@v1
       - run: moon update
       - run: moon build cmd/bridge cmd/coapbridge --target js --release --deny-warn
-      - run: node --test tests/cli.test.mjs tests/coap.test.mjs
+      - run: node --test tests/cli.test.mjs tests/coap.test.mjs tests/coap-client.test.mjs
       - run: node examples/coap/retry-demo.mjs
 
   distribution:

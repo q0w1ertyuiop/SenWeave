@@ -103,13 +103,27 @@ test "archive consumer diagnostics retain standard labels but omit extension nam
     }
   }
 }
+///|
+test "archive consumer uses a public SenML sender without socket dependencies" {
+  let sender = @coap.Sender::new("gateway", 123L).unwrap()
+  let key = @coap.BusinessKey::from_queries(["source=room-a", "key=batch-1"]).unwrap().unwrap()
+  let events = sender.send(b"[{\\"n\\":\\"temperature\\",\\"v\\":22.5,\\"t\\":-3}]", @senweave.SenmlJson, 0L, 0, business_key=key)
+  let retry = sender.poll(2000L)
+  guard events[0] is @coap.Transmit(first) else { fail("first request") }
+  guard retry[0] is @coap.Transmit(second) else { fail("request retry") }
+  assert_eq(first, second)
+  assert_eq(sender.is_pending(), true)
+  let cancelled = sender.cancel(6000L)
+  assert_eq(cancelled.length(), 1)
+  assert_eq(cancelled[0] is @coap.Cancelled(_), true)
+}
 ''', encoding="utf-8")
         run(["moon", "check", "--target", "all", "--deny-warn"], consumer)
         for target in targets:
             output = run(["moon", "test", "--target", target], consumer)
             assert "failed: 0" in output, output
         print(json.dumps({"module": name, "version": version, "archive_files": len(names),
-            "targets": targets, "consumer_cases": 3, "status": "passed", "sha256": hashlib.sha256(archive.read_bytes()).hexdigest()}))
+            "targets": targets, "consumer_cases": 4, "status": "passed", "sha256": hashlib.sha256(archive.read_bytes()).hexdigest()}))
 
 
 if __name__ == "__main__":

@@ -10,13 +10,29 @@ pub fn new_collector() -> Session
 
 pub fn new_deferred_collector() -> Session
 
+pub fn new_sender(Int32, String, Double) -> SenderSession
+
 pub fn poll(Session, Double) -> String
 
 pub fn receive(Session, String, String, Double, Double) -> String
 
+pub fn sender_cancel(SenderSession, Double) -> String
+
+pub fn sender_deadline(SenderSession) -> Double
+
+pub fn sender_poll(SenderSession, Double) -> String
+
+pub fn sender_receive(SenderSession, String, Double) -> String
+
+pub fn sender_start(SenderSession, String, Int32, String, String, Double, Int32) -> String
+
 // Errors
 
 // Types and methods
+pub struct SenderSession {
+  // private fields
+}
+
 pub struct Session {
   // private fields
 }
