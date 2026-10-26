@@ -1,4 +1,4 @@
-# 离线检查与转换 · 0.1.0-dev.5
+# 离线检查与转换 · 0.1.0-dev.6
 
 CLI 把文件与标准输入接到 SenWeave 库，可用于网关抓包检查、离线数据展开和 JSON／CBOR 转换。宿主需要 Node.js 24 及以上，核心逻辑由 MoonBit 编译；没有额外 npm 运行时依赖。
 
@@ -53,4 +53,4 @@ node bin/senweave.mjs resolve measurements.cbor --from cbor
 node --test tests/cli.test.mjs
 ```
 
-本批本地通过 12 项端到端测试，覆盖文件与管道、中文路径、大整数和字节串往返、重复键、时钟缺失、输入上限、覆盖拒绝、并发写入和临时文件清理。CI 在 Windows 与 Linux 上运行同一套检查。MoonBit 宿主桥逻辑另有 4 项测试，纳入三个后端的 58 项测试总数。
+CLI 有 12 项端到端测试，覆盖文件与管道、中文路径、大整数和字节串往返、重复键、时钟缺失、输入上限、覆盖拒绝、并发写入和临时文件清理。CI 在 Windows 与 Linux 上运行同一套检查。MoonBit 宿主桥逻辑另有 4 项测试，纳入三个后端的库测试。

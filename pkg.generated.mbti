@@ -10,6 +10,8 @@ pub fn parse_cbor(Bytes, limits? : ParseLimits, max_input_bytes? : Int32) -> Pac
 
 pub fn parse_json(String, limits? : ParseLimits) -> Pack raise SenmlError
 
+pub fn parse_payload(Bytes, Format, limits? : ParseLimits, max_input_bytes? : Int32, reject_extensions? : Bool) -> Pack raise SenmlError
+
 // Errors
 pub(all) suberror SenmlError {
   Invalid(Diagnostic)
@@ -57,10 +59,24 @@ pub(all) enum ErrorCode {
   InvalidCborLabel
   UnsupportedCborType
   OutputLimit
+  InvalidUtf8
+  IgnoredExtensions
 } derive(Eq, @debug.Debug)
 pub fn ErrorCode::equal(Self, Self) -> Bool
 pub fn ErrorCode::not_equal(Self, Self) -> Bool
 pub fn ErrorCode::to_repr(Self) -> @debug.Repr
+
+pub(all) enum Format {
+  SenmlJson
+  SenmlCbor
+} derive(Eq, @debug.Debug)
+pub fn Format::coap_content_format(Self) -> Int32
+pub fn Format::content_type(Self) -> String
+pub fn Format::equal(Self, Self) -> Bool
+pub fn Format::from_coap_content_format(Int32) -> Self?
+pub fn Format::from_content_type(String) -> Self?
+pub fn Format::not_equal(Self, Self) -> Bool
+pub fn Format::to_repr(Self) -> @debug.Repr
 
 pub(all) enum Label {
   BaseVersion
@@ -105,6 +121,7 @@ pub fn Number::to_repr(Self) -> @debug.Repr
 pub struct Pack {
   // private fields
 }
+pub fn Pack::ignored_extension_count(Self) -> Int32
 pub fn Pack::len(Self) -> Int32
 pub fn Pack::measurement_count(Self) -> Int32
 pub fn Pack::record(Self, Int32) -> Record?

@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "q0w1ertyuiop/senweave/cmd/coapbridge"
+
+import {
+  "q0w1ertyuiop/senweave/integrations/coap",
+}
+
+// Values
+pub fn new_collector() -> @coap.Collector
+
+pub fn poll(@coap.Collector, Double) -> String
+
+pub fn receive(@coap.Collector, String, String, Double, Double) -> String
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

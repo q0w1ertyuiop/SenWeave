@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "q0w1ertyuiop/senweave/integrations/coap"
+
+import {
+  "q0w1ertyuiop/senweave",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct Collector {
+  // private fields
+}
+pub fn Collector::new(reject_extensions? : Bool) -> Self
+pub fn Collector::poll(Self, Int64) -> Array[Event]
+pub fn Collector::receive(Self, String, Bytes, Int64, Double) -> Array[Event]
+
+pub(all) enum Event {
+  SendDatagram(String, Bytes)
+  Accepted(String, @senweave.ResolvedPack)
+  Rejected(String, @senweave.Diagnostic)
+  ProtocolError(String)
+  InvalidClock
+}
+
+// Type aliases
+
+// Traits

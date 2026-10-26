@@ -89,3 +89,13 @@ pub fn Pack::measurement_count(self : Pack) -> Int32 {
   }
   count
 }
+
+///|
+/// Count optional fields discarded by the parser across the complete raw pack.
+pub fn Pack::ignored_extension_count(self : Pack) -> Int32 {
+  let mut count = 0
+  for record in self.records {
+    count += record.ignored_extension_count
+  }
+  count
+}

@@ -1,4 +1,4 @@
-# 已验证的互操作范围 · 0.1.0-dev.5
+# 已验证的互操作范围 · 0.1.0-dev.6
 
 这份记录区分通用 CBOR 编码交换与外部 SenML 库的语义交换。测试使用未修改的已发布版本，公共脚本保留实际断言。
 
@@ -42,4 +42,16 @@ python scripts/check_senml_interop.py
 
 脚本输出 `passed-with-documented-differences`，并列出这三项差异。它们属于当前对照版本的兼容边界，不能据此推断其他版本具有相同行为。源码检索与本地安装内容也表明仓库 master 与 PyPI 发布版存在差别；此处以固定发布版的运行结果为准。
 
-[absmach/senml](https://github.com/absmach/senml) 已阅读其展开实现，尚未运行。更多版本、RFC 全部示例、传输层和真实设备输入需要后续覆盖。
+## aiocoap 0.4.14
+
+使用未修改的 [aiocoap 0.4.14](https://pypi.org/project/aiocoap/0.4.14/) 客户端，通过真实本机 UDP 与 Node.js 宿主的 MoonBit CoAP 采集器交互。脚本不以自制客户端替代外部协议栈。
+
+```sh
+moon build cmd/coapbridge --target js --release
+python -m pip install cbor2==5.7.1 aiocoap==0.4.14
+python scripts/check_coap_interop.py
+```
+
+共 7 次请求：JSON 基值／相对时间与 CBOR 字节串成功接收，缺失格式、错误格式、未知路径、无效 UTF-8、未知普通扩展被拒绝。断言核对 `2.04`／`4.00`／`4.04`／`4.15` 响应及两包完整测量的名称、时刻、数值和二进制数据。另有 Node UDP 测试通过独立构造的报文和 ACK 字节检查重传去重，纯协议逻辑测试覆盖 MID 过期复用与时钟回退。接口和边界见 [传输接入](transport.md)。
+
+这些测试不覆盖公网、DTLS、真实硬件设备、丢包压力或跨重启幂等。[absmach/senml](https://github.com/absmach/senml) 已阅读其展开实现，尚未运行；更多版本与 RFC 全部示例需要后续覆盖。

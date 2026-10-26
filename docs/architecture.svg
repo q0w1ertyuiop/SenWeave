@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="590" viewBox="0 0 1120 590" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="680" viewBox="0 0 1120 680" role="img" aria-labelledby="title desc">
   <title id="title">SenWeave implementation and planned architecture</title>
-  <desc id="desc">Implemented: bounded JSON and CBOR parsing, shared records, base and time resolution, filtering and standalone output. A Node.js CLI supplies bounded file and pipe input, strict UTF-8 and exclusive new-file output. MoonBit retains data semantics. Python cbor2 and a KPN SenML subset provide interoperability checks. Transport and registry publication remain planned.</desc>
+  <desc id="desc">Implemented: bounded JSON and CBOR byte ingress, shared records, resolution, filtering and standalone output. A Node.js CLI supplies file and pipe I/O. A portable MoonCoAP collector supplies bounded exchanges and duplicate response replay; a Node.js loopback UDP host is tested with aiocoap. Python cbor2 and a KPN SenML subset provide data interoperability checks. MQTT and registry publication remain planned.</desc>
   <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9" fill="#758397"/></marker></defs>
-  <rect width="1120" height="590" rx="20" fill="#f5f8fc"/>
+  <rect width="1120" height="680" rx="20" fill="#f5f8fc"/>
   <g font-family="Segoe UI,Arial,sans-serif">
     <text x="42" y="48" font-size="25" font-weight="700" fill="#102539">SenWeave · SenML data semantics</text>
     <text x="42" y="76" font-size="15" fill="#526278">Solid green = implemented · Dashed outline = planned</text>
@@ -29,8 +29,11 @@
     <rect x="42" y="398" width="1036" height="64" rx="12" fill="#e0f6ef" stroke="#14775d" stroke-width="2"/>
     <text x="64" y="424" font-size="15" font-weight="600" fill="#145742">Node.js CLI · check / resolve · MoonBit semantic core</text>
     <text x="64" y="448" font-size="14" fill="#145742">Bounded files / stdin · Strict UTF-8 · Explicit clock · Exclusive new-file output · JSON / CBOR exchange</text>
-    <rect x="42" y="492" width="1036" height="62" rx="12" fill="#fff" stroke="#9aa7b7" stroke-width="1.5" stroke-dasharray="6 4"/>
-    <text x="64" y="517" font-size="15" font-weight="600" fill="#31435b">Planned integration</text>
-    <text x="64" y="540" font-size="14" fill="#526278">More SenML implementations and profiles · MQTT / CoAP transport · Mooncakes release</text>
+    <rect x="42" y="486" width="1036" height="74" rx="12" fill="#e0f6ef" stroke="#14775d" stroke-width="2"/>
+    <text x="64" y="514" font-size="15" font-weight="600" fill="#145742">MoonCoAP collector · POST /ingest · JSON 110 / CBOR 112</text>
+    <text x="64" y="541" font-size="14" fill="#145742">Separate clocks · Bounded deduplication · ACK replay · Node.js loopback UDP · Independent aiocoap peer</text>
+    <rect x="42" y="584" width="1036" height="62" rx="12" fill="#fff" stroke="#9aa7b7" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <text x="64" y="609" font-size="15" font-weight="600" fill="#31435b">Planned integration</text>
+    <text x="64" y="632" font-size="14" fill="#526278">MQTT and native UDP hosts · Persistence / acknowledgment coordination · Mooncakes release</text>
   </g>
 </svg>

@@ -1,6 +1,6 @@
 name = "q0w1ertyuiop/senweave"
 
-version = "0.1.0-dev.5"
+version = "0.1.0-dev.6"
 
 license = "Apache-2.0"
 
@@ -16,4 +16,5 @@ repository = "https://github.com/q0w1ertyuiop/SenWeave"
 
 import {
   "2515050242/cbor@0.1.2",
+  "sujy123456/mooncoap@0.1.1",
 }

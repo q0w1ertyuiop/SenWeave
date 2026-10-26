@@ -1,4 +1,4 @@
-# CBOR 约定 · 0.1.0-dev.5
+# CBOR 约定 · 0.1.0-dev.6
 
 `parse_cbor(bytes, limits?, max_input_bytes?)` 把 `application/senml+cbor` 数据包读入与 JSON 相同的 `Pack`。基字段继承、名称检查、版本 10、测量类型和错误处理复用现有实现。依据 [RFC 8428 §6](https://www.rfc-editor.org/rfc/rfc8428.html#section-6)，基础标签采用整数键，二进制值使用 CBOR 字节串。
 
@@ -48,7 +48,7 @@ CBOR 输入的整数会保留准确十进制文本，如 `9007199254740993` 和 
 
 ## 复现验证
 
-目前在 native、JS、wasm-gc 各通过 58 项 MoonBit 测试。其中 19 项 CBOR 测试包含独立字节样本、准确整数边界、浮点宽度、Tag 4、二进制、重复标签、截断、巨大声明、不定长项、UTF-8 和资源上限。
+CBOR 的 19 项 MoonBit 测试在 native、JS、wasm-gc 运行，包含独立字节样本、准确整数边界、浮点宽度、Tag 4、二进制、重复标签、截断、巨大声明、不定长项、UTF-8 和资源上限。字节入口及 CoAP 子包另测实际传输中的 CBOR 接收。
 
 Python 3.9 及以上可运行外部编码对照；使用独立虚拟环境安装测试依赖：
 

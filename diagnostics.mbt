@@ -29,6 +29,8 @@ pub(all) enum ErrorCode {
   InvalidCborLabel
   UnsupportedCborType
   OutputLimit
+  InvalidUtf8
+  IgnoredExtensions
 } derive(Eq, Debug)
 
 ///|

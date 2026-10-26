@@ -1,0 +1,12 @@
+import {
+  "q0w1ertyuiop/senweave/integrations/coap" @collector,
+  "moonbitlang/core/encoding/hex",
+}
+
+pkgtype(kind: "executable")
+
+options(
+  link: {
+    "js": { "exports": [ "new_collector", "receive", "poll" ], "format": "cjs" },
+  },
+)
