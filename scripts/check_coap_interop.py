@@ -48,6 +48,13 @@ async def main(storage_path=None):
         strict = await post(b'[{"n":"x","v":1,"vendor":1}]', 110)
         assert strict.code == aiocoap.BAD_REQUEST and strict.payload == b"IgnoredExtensions"
         if storage_path:
+            keyed_path = "/ingest?source=external&key=batch-1"
+            assert (await post(valid, 110, keyed_path)).code == aiocoap.CHANGED
+            assert (await post(valid, 110, keyed_path)).code == aiocoap.CHANGED
+            changed = valid.replace(b'2.5', b'3.5')
+            assert (await post(changed, 110, keyed_path)).code == aiocoap.CONFLICT
+            assert (await post(valid, 110, "/ingest?key=missing-source")).code == aiocoap.BAD_REQUEST
+        if storage_path:
             with closing(sqlite3.connect(storage_path)) as database:
                 accepted = [json.loads(row[0]) for row in database.execute("SELECT senml_json FROM measurements ORDER BY id")]
         else:
@@ -56,11 +63,14 @@ async def main(storage_path=None):
                 event = json.loads(await asyncio.wait_for(process.stdout.readline(), timeout=2))
                 if event["kind"] == "accepted":
                     accepted.append(json.loads(event["json"]))
-        assert accepted == [
+        expected = [
             [{"n": "external:temperature", "t": 1792999997, "v": 22.5}],
             [{"n": "blob", "t": 1793000000, "vd": "----____"}],
         ]
-        print(json.dumps({"peer": "aiocoap==0.4.14", "transport": "loopback-udp4", "mode": "sqlite-after-commit" if storage_path else "validation", "exchanges": 7, "accepted": 2, "status": "passed"}))
+        if storage_path:
+            expected.append(expected[0])
+        assert accepted == expected
+        print(json.dumps({"peer": "aiocoap==0.4.14", "transport": "loopback-udp4", "mode": "sqlite-after-commit" if storage_path else "validation", "exchanges": 11 if storage_path else 7, "accepted": len(expected), "status": "passed"}))
     finally:
         if context is not None:
             await context.shutdown()

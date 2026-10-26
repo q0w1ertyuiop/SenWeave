@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="664" viewBox="0 0 1160 664" role="img" aria-labelledby="title desc">
+  <title id="title">SenWeave business identity and retry flow</title>
+  <desc id="desc">MoonBit parses and resolves a SenML payload, then emits a deferred delivery. The host transaction uses source and key to compare original bytes and format. A new identity is committed once; an identical retry retains the first measurement; changed bytes produce a conflict. SQLite persists the identity across process restarts.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="#7e9eaf"/></marker>
+  </defs>
+  <rect width="1160" height="664" rx="22" fill="#0c1728"/>
+  <g font-family="Segoe UI,Arial,sans-serif">
+    <text x="44" y="55" font-size="29" font-weight="700" fill="#eff8ff">SenWeave · retry without a second write</text>
+    <text x="44" y="87" font-size="16" fill="#a8c0d0">One business identity · Original SenML bytes · Commit before the success response</text>
+    <g fill="#14283b" stroke="#3a5269" stroke-width="1.5">
+      <rect x="44" y="124" width="320" height="180" rx="14"/>
+      <rect x="414" y="124" width="300" height="180" rx="14"/>
+      <rect x="764" y="124" width="352" height="180" rx="14"/>
+    </g>
+    <g fill="#e1f1fa" font-size="19" font-weight="600">
+      <text x="66" y="158">Device request</text>
+      <text x="436" y="158">MoonBit semantic core</text>
+      <text x="786" y="158">Host storage transaction</text>
+    </g>
+    <g fill="#b2cad9" font-size="15">
+      <text x="66" y="192">source = room-a</text><text x="66" y="220">key = batch-1</text>
+      <text x="66" y="248">SenML JSON / CBOR + relative time</text><text x="66" y="278">Transport MID may change on retry</text>
+      <text x="436" y="192">Bounded bytes → parse → resolve</text><text x="436" y="220">Independent measurement pack</text>
+      <text x="436" y="248">Opaque Delivery + original payload</text><text x="436" y="278">Empty ACK ≠ storage success</text>
+      <text x="786" y="192">UNIQUE(source, business_key)</text><text x="786" y="220">Compare format + original bytes</text>
+      <text x="786" y="248">SQLite example · atomic decision</text><text x="786" y="278">Other sinks can use the same API</text>
+    </g>
+    <g stroke="#7e9eaf" stroke-width="2" fill="none" marker-end="url(#arrow)">
+      <path d="M370 214H402"/><path d="M720 214H752"/>
+      <path d="M940 306V334H209V354"/><path d="M940 334H580V354"/><path d="M940 334H951V354"/>
+    </g>
+    <rect x="44" y="366" width="330" height="208" rx="14" fill="#123c35" stroke="#4ae1b0" stroke-width="1.5"/>
+    <rect x="415" y="366" width="330" height="208" rx="14" fill="#17354a" stroke="#5cbbf2" stroke-width="1.5"/>
+    <rect x="786" y="366" width="330" height="208" rx="14" fill="#422c30" stroke="#f8a4a4" stroke-width="1.5"/>
+    <g font-size="18" font-weight="600">
+      <text x="66" y="400" fill="#90f1cf">NEW IDENTITY</text>
+      <text x="437" y="400" fill="#a4dfff">IDENTICAL RETRY</text>
+      <text x="808" y="400" fill="#ffc1c1">KEY CONFLICT</text>
+    </g>
+    <g font-size="15" fill="#d5e5ed">
+      <text x="66" y="437">Insert measurement + identity</text><text x="66" y="466">Commit → Stored → 2.04</text>
+      <text x="66" y="502">Stored packs: +1</text><text x="66" y="542">A different source is a new identity</text>
+      <text x="437" y="437">Keep the first committed measurement</text><text x="437" y="466">AlreadyStored → 2.04</text>
+      <text x="437" y="502">Stored packs: +0</text><text x="437" y="542">Original absolute time stays intact</text>
+      <text x="808" y="437">Same source + key, different payload</text><text x="808" y="466">KeyConflict → 4.09</text>
+      <text x="808" y="502">Stored packs: +0</text><text x="808" y="542">Existing measurement is unchanged</text>
+    </g>
+    <text x="44" y="615" font-size="15" fill="#a8c0d0">Identity lasts while ledger rows are retained · Producers need an authenticated source mapping</text>
+    <text x="44" y="642" font-size="14" fill="#7d9aae">Implemented loopback demo · 16 pending deliveries · 30 s deadline · Storage errors return 5.00</text>
+  </g>
+</svg>

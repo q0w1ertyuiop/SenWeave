@@ -16,7 +16,10 @@ pub fn new_collector() -> Session {
 
 ///|
 pub fn new_deferred_collector() -> Session {
-  { collector: @collector.Collector::new(deferred=true), deliveries: Map([]), }
+  {
+    collector: @collector.Collector::new(deferred=true, idempotency=true),
+    deliveries: Map([]),
+  }
 }
 
 ///|
@@ -38,19 +41,37 @@ fn events_json(session : Session, events : Array[@collector.Event]) -> String {
           })
         @collector.Pending(delivery, peer, pack) => {
           session.deliveries[delivery.id()] = delivery
+          let source = match delivery.business_key() {
+            Some(value) => Json::string(value.source)
+            None => Json::null()
+          }
+          let key = match delivery.business_key() {
+            Some(value) => Json::string(value.key)
+            None => Json::null()
+          }
           Json::object({
             "kind": Json::string("pending"),
             "id": Json::number(delivery.id().to_double()),
             "peer": Json::string(peer),
             "json": Json::string(pack.to_json_string()),
+            "source": source,
+            "key": key,
+            "format": Json::number(
+              delivery.format().coap_content_format().to_double(),
+            ),
+            "payloadhex": Json::string(@hex.encode(delivery.payload())),
           })
         }
         @collector.Completed(id, peer)
+        | @collector.Duplicate(id, peer)
+        | @collector.Conflict(id, peer)
         | @collector.StorageFailed(id, peer)
         | @collector.Expired(id, peer) => {
           session.deliveries.remove(id)
           let kind = match event {
             @collector.Completed(_, _) => "completed"
+            @collector.Duplicate(_, _) => "duplicate"
+            @collector.Conflict(_, _) => "conflict"
             @collector.StorageFailed(_, _) => "storage-failed"
             _ => "expired"
           }
@@ -138,6 +159,33 @@ pub fn finish(
   match session.deliveries.get(id) {
     Some(delivery) =>
       events_json(session, delivery.finish(stored~, monotonic_ms.to_int64()))
+    None => events_json(session, [@collector.InvalidDelivery(id)])
+  }
+}
+
+///|
+pub fn complete(
+  session : Session,
+  id : Int32,
+  outcome : String,
+  monotonic_ms : Double,
+) -> String {
+  if !monotonic_valid(monotonic_ms) {
+    return events_json(session, [@collector.InvalidClock])
+  }
+  let completion = match outcome {
+    "stored" => @collector.Stored
+    "duplicate" => @collector.AlreadyStored
+    "conflict" => @collector.KeyConflict
+    "failed" => @collector.Failed
+    _ => return events_json(session, [@collector.InvalidDelivery(id)])
+  }
+  match session.deliveries.get(id) {
+    Some(delivery) =>
+      events_json(
+        session,
+        delivery.complete(completion, monotonic_ms.to_int64()),
+      )
     None => events_json(session, [@collector.InvalidDelivery(id)])
   }
 }

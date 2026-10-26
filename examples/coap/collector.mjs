@@ -51,10 +51,13 @@ function handle(events) {
   for (const event of events) {
     if (closed) break;
     if (event.kind === 'pending') {
-      let stored = false;
-      try { store.append(event.peer, reference ?? Date.now() / 1000, event.json); stored = true; }
+      let outcome = 'failed';
+      const identity = event.source === null ? null : {
+        source: event.source, key: event.key, format: event.format, payload: Buffer.from(event.payloadhex, 'hex'),
+      };
+      try { outcome = store.append(event.peer, reference ?? Date.now() / 1000, event.json, identity); }
       catch { /* A storage failure becomes a 5.00 response, never 2.04. */ }
-      handle(JSON.parse(core.finish(collector, event.id, stored, Math.floor(performance.now()))));
+      handle(JSON.parse(core.complete(collector, event.id, outcome, Math.floor(performance.now()))));
       continue;
     }
     if (event.kind !== 'send') { emit(event); continue; }

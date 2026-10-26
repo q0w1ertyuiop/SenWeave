@@ -6,6 +6,7 @@ fn request(
   path~ : String = "ingest",
   verb~ : @protocol.Method = @protocol.Post,
   msg_type~ : @protocol.MessageType = @protocol.Confirmable,
+  queries~ : Array[String] = [],
 ) -> Bytes {
   let message = @protocol.Message::new(
     msg_type,
@@ -16,6 +17,9 @@ fn request(
   message.options = [@protocol.option_text(11, path)]
   if format >= 0 {
     message.options.push(@protocol.option_uint(12, format.to_int64()).unwrap())
+  }
+  for query in queries {
+    message.options.push(@protocol.option_text(15, query))
   }
   message.payload = payload
   @protocol.encode(message, {

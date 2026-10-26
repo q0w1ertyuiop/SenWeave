@@ -14,6 +14,7 @@ options(
         "receive",
         "poll",
         "finish",
+        "complete",
       ],
       "format": "cjs",
     },

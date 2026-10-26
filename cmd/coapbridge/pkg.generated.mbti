@@ -2,6 +2,8 @@
 package "q0w1ertyuiop/senweave/cmd/coapbridge"
 
 // Values
+pub fn complete(Session, Int32, String, Double) -> String
+
 pub fn finish(Session, Int32, Bool, Double) -> String
 
 pub fn new_collector() -> Session

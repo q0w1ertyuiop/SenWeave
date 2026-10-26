@@ -67,3 +67,4 @@ jobs:
       - run: moon update
       - run: moon build cmd/bridge cmd/coapbridge --target js --release --deny-warn
       - run: node --test tests/cli.test.mjs tests/coap.test.mjs
+      - run: node examples/coap/retry-demo.mjs

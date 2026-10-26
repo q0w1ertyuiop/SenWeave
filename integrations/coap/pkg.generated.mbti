@@ -2,6 +2,7 @@
 package "q0w1ertyuiop/senweave/integrations/coap"
 
 import {
+  "moonbitlang/core/debug",
   "q0w1ertyuiop/senweave",
 }
 
@@ -10,25 +11,47 @@ import {
 // Errors
 
 // Types and methods
+pub struct BusinessKey {
+  source : String
+  key : String
+} derive(Eq, @debug.Debug)
+pub fn BusinessKey::equal(Self, Self) -> Bool
+pub fn BusinessKey::from_queries(Array[String]) -> Result[Self?, Unit]
+pub fn BusinessKey::not_equal(Self, Self) -> Bool
+pub fn BusinessKey::to_repr(Self) -> @debug.Repr
+
 pub struct Collector {
   // private fields
 }
-pub fn Collector::new(reject_extensions? : Bool, deferred? : Bool) -> Self
+pub fn Collector::new(reject_extensions? : Bool, deferred? : Bool, idempotency? : Bool) -> Self
 pub fn Collector::pending_count(Self) -> Int32
 pub fn Collector::poll(Self, Int64) -> Array[Event]
 pub fn Collector::receive(Self, String, Bytes, Int64, Double) -> Array[Event]
 
+pub(all) enum Completion {
+  Stored
+  AlreadyStored
+  KeyConflict
+  Failed
+}
+
 pub struct Delivery {
   // private fields
 }
+pub fn Delivery::business_key(Self) -> BusinessKey?
+pub fn Delivery::complete(Self, Completion, Int64) -> Array[Event]
 pub fn Delivery::finish(Self, stored~ : Bool, Int64) -> Array[Event]
+pub fn Delivery::format(Self) -> @senweave.Format
 pub fn Delivery::id(Self) -> Int32
+pub fn Delivery::payload(Self) -> Bytes
 
 pub(all) enum Event {
   SendDatagram(String, Bytes)
   Accepted(String, @senweave.ResolvedPack)
   Pending(Delivery, String, @senweave.ResolvedPack)
   Completed(Int32, String)
+  Duplicate(Int32, String)
+  Conflict(Int32, String)
   StorageFailed(Int32, String)
   Expired(Int32, String)
   Busy(String)

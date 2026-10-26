@@ -10,6 +10,33 @@ priv struct PendingRequest {
 pub struct Delivery {
   priv collector : Collector
   priv id : Int32
+  priv business_key : BusinessKey?
+  priv payload : Bytes
+  priv format : @senweave.Format
+}
+
+///|
+pub fn Delivery::business_key(self : Delivery) -> BusinessKey? {
+  self.business_key
+}
+
+///|
+pub fn Delivery::payload(self : Delivery) -> Bytes {
+  self.payload
+}
+
+///|
+pub fn Delivery::format(self : Delivery) -> @senweave.Format {
+  self.format
+}
+
+///|
+/// Outcomes are reported by the host after its storage transaction.
+pub(all) enum Completion {
+  Stored
+  AlreadyStored
+  KeyConflict
+  Failed
 }
 
 ///|
@@ -69,6 +96,17 @@ pub fn Delivery::finish(
   stored~ : Bool,
   monotonic_ms : Int64,
 ) -> Array[Event] {
+  self.complete(if stored { Stored } else { Failed }, monotonic_ms)
+}
+
+///|
+/// AlreadyStored and KeyConflict require a business key. They respectively
+/// schedule 2.04 and 4.09 without asking the library to write anything again.
+pub fn Delivery::complete(
+  self : Delivery,
+  outcome : Completion,
+  monotonic_ms : Int64,
+) -> Array[Event] {
   let collector = self.collector
   let events = []
   if !collector.advance(monotonic_ms, events) {
@@ -81,7 +119,16 @@ pub fn Delivery::finish(
     }
     Some(pending) => pending
   }
-  let code = if stored { 68 } else { 160 }
+  if self.business_key is None &&
+    (outcome is AlreadyStored || outcome is KeyConflict) {
+    events.push(InvalidDelivery(self.id))
+    return events
+  }
+  let code = match outcome {
+    Stored | AlreadyStored => 68
+    KeyConflict => 137
+    Failed => 160
+  }
   let reply : @protocol.Response = {
     code: { value: code, },
     options: [],
@@ -91,10 +138,11 @@ pub fn Delivery::finish(
     Err(_) => events.push(ProtocolError(pending.peer))
     Ok(_) => {
       collector.pending.remove(self.id)
-      if stored {
-        events.push(Completed(self.id, pending.peer))
-      } else {
-        events.push(StorageFailed(self.id, pending.peer))
+      match outcome {
+        Stored => events.push(Completed(self.id, pending.peer))
+        AlreadyStored => events.push(Duplicate(self.id, pending.peer))
+        KeyConflict => events.push(Conflict(self.id, pending.peer))
+        Failed => events.push(StorageFailed(self.id, pending.peer))
       }
     }
   }

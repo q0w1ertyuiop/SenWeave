@@ -9,11 +9,13 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { DatabaseSync } from 'node:sqlite';
+import { sendMeasurement } from '../examples/coap/client.mjs';
+import { openStore } from '../examples/coap/sqlite-store.mjs';
 
 const script = fileURLToPath(new URL('../examples/coap/collector.mjs', import.meta.url));
 
-async function start(t, duration = '3000', extra = []) {
-  const child = spawn(process.execPath, [script, '--duration-ms', duration, '--now', '1793000000', ...extra]);
+async function start(t, duration = '3000', extra = [], now = '1793000000') {
+  const child = spawn(process.execPath, [script, '--duration-ms', duration, '--now', now, ...extra]);
   const events = [];
   const lines = createInterface({ input: child.stdout });
   let errors = '';
@@ -180,6 +182,104 @@ test('SQLite row quota rejects new storage with 5.00 and preserves existing meas
     assert.equal((await separateExchange(socket, server.port, packet(60, '[{"n":"full","v":1}]')))[1], 160);
     assert.equal(database.prepare('SELECT count(*) AS count FROM measurements').get().count, 4096);
   } finally { database?.close(); if (server) await stop(server.child); ledger.cleanup(); }
+});
+
+test('business identity survives server restart, preserves first relative time and rejects changed payload', async t => {
+  const ledger = temporaryLedger();
+  let server, database;
+  try {
+    const payload = Buffer.from('[{"n":"counter","v":9007199254740993,"t":-3}]');
+    server = await start(t, '5000', ['--store', ledger.path]);
+    assert.equal((await sendMeasurement({ port: server.port, payload, source: 'room-a', key: 'batch-1' })).code, 68);
+    await stop(server.child);
+    server = await start(t, '5000', ['--store', ledger.path], '1793000600');
+    const duplicate = await sendMeasurement({ port: server.port, payload, source: 'room-a', key: 'batch-1', mid: 11 });
+    assert.equal(duplicate.code, 68);
+    assert.equal(duplicate.emptyAck, true);
+    const conflict = await sendMeasurement({ port: server.port, payload: Buffer.from('[{"n":"counter","v":2,"t":-3}]'), source: 'room-a', key: 'batch-1', mid: 12 });
+    assert.equal(conflict.code, 137);
+    database = new DatabaseSync(ledger.path, { readOnly: true });
+    assert.equal(database.prepare('SELECT count(*) AS count FROM measurements').get().count, 1);
+    const row = database.prepare('SELECT senml_json, payload, source, business_key FROM measurements').get();
+    assert.equal(row.senml_json, '[{"n":"counter","t":1792999997,"v":9007199254740993}]');
+    assert.deepEqual(Buffer.from(row.payload), payload);
+    database.close(); database = undefined;
+    assert.equal((await sendMeasurement({ port: server.port, payload, source: 'room-b', key: 'batch-1', mid: 13 })).code, 68);
+    database = new DatabaseSync(ledger.path, { readOnly: true });
+    assert.equal(database.prepare('SELECT count(*) AS count FROM measurements').get().count, 2);
+  } finally { database?.close(); if (server) await stop(server.child); ledger.cleanup(); }
+});
+
+test('replaying a committed business key succeeds at the row quota while a new key fails', async t => {
+  const ledger = temporaryLedger();
+  let server, database;
+  try {
+    server = await start(t, '5000', ['--store', ledger.path]);
+    const request = { port: server.port, payload: Buffer.from('[{"n":"x","v":1}]'), source: 'quota', key: 'saved' };
+    assert.equal((await sendMeasurement(request)).code, 68);
+    database = new DatabaseSync(ledger.path);
+    database.exec(`WITH RECURSIVE numbers(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM numbers WHERE n < 4095)
+      INSERT INTO measurements(peer, received_at, senml_json) SELECT 'seed', 1793000000, '[]' FROM numbers`);
+    assert.equal((await sendMeasurement({ ...request, mid: 11 })).code, 68);
+    assert.equal((await sendMeasurement({ ...request, key: 'new', mid: 12 })).code, 160);
+    assert.equal(database.prepare('SELECT count(*) AS count FROM measurements').get().count, 4096);
+  } finally { database?.close(); if (server) await stop(server.child); ledger.cleanup(); }
+});
+
+test('two collectors sharing a ledger cannot commit the same business key twice', async t => {
+  const ledger = temporaryLedger();
+  const servers = [];
+  let database;
+  try {
+    servers.push(await start(t, '5000', ['--store', ledger.path]));
+    servers.push(await start(t, '5000', ['--store', ledger.path]));
+    const request = { payload: Buffer.from('[{"n":"shared","v":1}]'), source: 'shared', key: 'one' };
+    const results = await Promise.all(servers.map(server => sendMeasurement({ ...request, port: server.port })));
+    assert.equal(results.some(result => result.code === 68), true);
+    assert.equal(results.every(result => [68, 160].includes(result.code)), true);
+    for (const server of servers) assert.equal((await sendMeasurement({ ...request, port: server.port, mid: 11 })).code, 68);
+    database = new DatabaseSync(ledger.path, { readOnly: true });
+    assert.equal(database.prepare('SELECT count(*) AS count FROM measurements').get().count, 1);
+  } finally { database?.close(); for (const server of servers) await stop(server.child); ledger.cleanup(); }
+});
+
+function legacyLedger(path, extraColumn = '') {
+  const database = new DatabaseSync(path);
+  database.exec(`PRAGMA application_id = ${0x53574c31}; PRAGMA user_version = 1;
+    CREATE TABLE measurements(id INTEGER PRIMARY KEY, peer TEXT NOT NULL, received_at REAL NOT NULL,
+      senml_json TEXT NOT NULL ${extraColumn}) STRICT;
+    INSERT INTO measurements(peer, received_at, senml_json) VALUES ('legacy', 1793000000, '[]')`);
+  database.close();
+}
+
+test('owned schema v1 upgrades atomically and retains legacy measurements', () => {
+  const ledger = temporaryLedger();
+  let database, store;
+  try {
+    legacyLedger(ledger.path);
+    store = openStore(ledger.path);
+    assert.equal(store.append('p', 1793000000, '[]', { source: 'room', key: 'first', format: 110, payload: Buffer.from('[]') }), 'stored');
+    assert.equal(store.append('q', 1793000600, '[1]', { source: 'room', key: 'first', format: 110, payload: Buffer.from('[]') }), 'duplicate');
+    assert.equal(store.append('q', 1793000600, '[]', { source: 'room', key: 'first', format: 112, payload: Buffer.from('[]') }), 'conflict');
+    store.close(); store = undefined;
+    database = new DatabaseSync(ledger.path, { readOnly: true });
+    assert.equal(database.prepare('PRAGMA user_version').get().user_version, 2);
+    assert.equal(database.prepare('SELECT count(*) AS count FROM measurements').get().count, 2);
+    assert.equal(database.prepare('SELECT peer, senml_json FROM measurements WHERE id = 1').get().peer, 'legacy');
+  } finally { store?.close(); database?.close(); ledger.cleanup(); }
+});
+
+test('failed owned-schema upgrade rolls back preceding ALTER operations', () => {
+  const ledger = temporaryLedger();
+  let database;
+  try {
+    legacyLedger(ledger.path, ', business_key TEXT');
+    assert.throws(() => openStore(ledger.path));
+    database = new DatabaseSync(ledger.path, { readOnly: true });
+    assert.equal(database.prepare('PRAGMA user_version').get().user_version, 1);
+    assert.equal(database.prepare('PRAGMA table_info(measurements)').all().some(column => column.name === 'source'), false);
+    assert.equal(database.prepare('SELECT count(*) AS count FROM measurements').get().count, 1);
+  } finally { database?.close(); ledger.cleanup(); }
 });
 
 test('loopback UDP rejects wrong metadata invalid UTF-8 and extension loss', async t => {

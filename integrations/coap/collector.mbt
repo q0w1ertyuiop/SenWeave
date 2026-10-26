@@ -6,6 +6,8 @@ pub(all) enum Event {
   Accepted(String, @senweave.ResolvedPack)
   Pending(Delivery, String, @senweave.ResolvedPack)
   Completed(Int32, String)
+  Duplicate(Int32, String)
+  Conflict(Int32, String)
   StorageFailed(Int32, String)
   Expired(Int32, String)
   Busy(String)
@@ -21,6 +23,7 @@ pub struct Collector {
   priv endpoint : @protocol.Endpoint
   priv reject_extensions : Bool
   priv deferred : Bool
+  priv idempotency : Bool
   priv pending : Map[Int32, PendingRequest]
 }
 
@@ -28,6 +31,7 @@ pub struct Collector {
 pub fn Collector::new(
   reject_extensions~ : Bool = true,
   deferred~ : Bool = false,
+  idempotency~ : Bool = false,
 ) -> Collector {
   let defaults = @protocol.Config::default()
   let limits = { ..defaults.limits, max_datagram: 9000, max_payload: 8192, }
@@ -45,6 +49,7 @@ pub fn Collector::new(
     endpoint: @protocol.Endpoint::new(config).unwrap(),
     reject_extensions,
     deferred,
+    idempotency,
     pending: Map([]),
   }
 }
@@ -90,11 +95,12 @@ pub fn Collector::receive(
         events.push(SendDatagram(peer, bytes))
       @protocol.RequestReceived(request) => {
         let message = request.message
+        let business_key = self.request_key(message)
         let response = if @protocol.request_path(message) != Ok("/ingest") {
           @protocol.Response::error(132)
         } else if message.code.verb() != Some(@protocol.Post) {
           @protocol.Response::error(133)
-        } else if @protocol.request_queries(message) != Ok([]) {
+        } else if business_key is Err(_) {
           @protocol.Response::error(128)
         } else {
           match @protocol.message_uint(message, 12, -1L) {
@@ -128,7 +134,17 @@ pub fn Collector::receive(
                     }
                     append_sends(events, self.endpoint.drain())
                     events.push(
-                      Pending({ collector: self, id: request.id, }, peer, pack),
+                      Pending(
+                        {
+                          collector: self,
+                          id: request.id,
+                          business_key: business_key.unwrap(),
+                          payload: message.payload,
+                          format,
+                        },
+                        peer,
+                        pack,
+                      ),
                     )
                     continue
                   }

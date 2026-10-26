@@ -4,7 +4,7 @@
 
 面向 MoonBit 物联网应用的 SenML 测量数据语义与 JSON／CBOR 交换库。
 
-**当前阶段：SenML JSON／CBOR 库、离线工具与 CoAP 采集适配器，版本 `0.1.0-dev.7`。** 支持带资源上限的字节解析、基字段展开、筛选、独立记录输出，以及文件／管道检查和转换。CoAP 支持延迟到宿主存储完成后应答，已通过本机 UDP、SQLite 事务及 aiocoap 客户端验证；Mooncakes 正式发布和 MQTT 集成尚未完成。
+**当前阶段：SenML JSON／CBOR 库、离线工具与 CoAP 采集适配器，版本 `0.1.0-dev.8`。** 支持带资源上限的字节解析、基字段展开、筛选、独立记录输出，以及文件／管道检查和转换。CoAP 支持存储后应答和可选业务键；SQLite 示例可在进程重启后识别相同负载的重试，并拒绝同键冲突。Mooncakes 正式发布和 MQTT 集成尚未完成。
 
 SenML 数据包里的测量记录可以继承此前出现的设备名称、基准时间、单位和基准数值。记录从原数据包取出前，需要先应用这些信息，才能安全地独立保存或筛选。项目依据 [RFC 8428](https://www.rfc-editor.org/rfc/rfc8428.html)，为设备网关、采集服务和离线工具提供这层共享能力。
 
@@ -90,6 +90,16 @@ node examples/coap/collector.mjs --port 0 --duration-ms 10000 --store measuremen
 ```
 
 `--store` 使用 Node.js 内置 SQLite 保存独立测量文本，事务提交后才返回 `2.04`，锁冲突或配额失败返回 `5.00`。现有非 SenWeave 数据库会被拒绝。数据库配置和跨重启去重边界见 [存储后应答说明](docs/transport.md#存储后应答)。
+
+可选应用路由 `/ingest?source=room-a&key=batch-1` 用业务来源和幂等键标识一次写入。同键、同格式、同负载重试不新增记录，也不重新保存基于新接收时刻展开的时间；同键换负载返回 `4.09`。这是应用约定，未修改 SenML 标签或将 CoAP MID 当作永久身份。生产接入需把来源绑定到已认证设备，详见 [业务幂等约定](docs/idempotency.md)。
+
+一键演示会运行真实 UDP、重启采集进程并核对账本，临时文件在完成后清理：
+
+```sh
+node examples/coap/retry-demo.mjs
+```
+
+演示操作、四个检查点与讲解材料见 [三分钟演示](docs/demo.md)。
 
 ## 下一步实现
 
