@@ -17,11 +17,12 @@ def run_example(target, payload=None):
     completed = subprocess.run(
         command,
         cwd=Path(__file__).resolve().parent.parent,
-        check=True,
         capture_output=True,
         encoding="utf-8",
         timeout=120,
     )
+    if completed.returncode:
+        raise RuntimeError(f"MoonBit consumer failed ({target}):\n{completed.stderr}")
     return json.loads(completed.stdout)
 
 

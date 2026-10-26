@@ -53,6 +53,7 @@ CBOR 输入的整数会保留准确十进制文本，如 `9007199254740993` 和 
 Python 3.9 及以上可运行外部编码对照；使用独立虚拟环境安装测试依赖：
 
 ```sh
+moon update
 python -m pip install cbor2==5.7.1
 python scripts/check_cbor_interop.py --target js
 python scripts/check_cbor_interop.py --target native
