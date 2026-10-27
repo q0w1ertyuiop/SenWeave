@@ -59,4 +59,4 @@ python scripts/check_coap_interop.py --storage
 
 Node 测试另外验证数据库锁定和行配额返回 `5.00`、已有账本重开、跨重启重试保留首次时间、两个采集进程共享账本不重复写入、满额时已存请求仍成功，以及旧账本格式升级失败回滚。拒绝其他应用数据库时字节不变。一键演示通过 4 次真实 UDP 请求展示同样的重启与冲突流程，见 [演示说明](demo.md)。
 
-这些测试不覆盖公网、DTLS、真实硬件设备、丢包压力或跨重启幂等。[absmach/senml](https://github.com/absmach/senml) 已阅读其展开实现，尚未运行；更多版本与 RFC 全部示例需要后续覆盖。
+跨重启业务幂等由上述 Node UDP 测试验证；当前测试尚未覆盖公网、DTLS、真实硬件设备或持续丢包压力。[absmach/senml](https://github.com/absmach/senml) 已阅读其展开实现，尚未运行；更多版本与 RFC 全部示例需要后续覆盖。
