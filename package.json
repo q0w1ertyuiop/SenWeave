@@ -1,18 +1,48 @@
 {
   "name": "@q0w1ertyuiop/senweave",
-  "version": "0.1.0-dev.11",
+  "version": "0.1.0-dev.12",
   "description": "Bounded SenML JSON/CBOR validation and resolution powered by MoonBit",
   "type": "commonjs",
   "license": "Apache-2.0",
-  "repository": { "type": "git", "url": "https://github.com/q0w1ertyuiop/SenWeave.git" },
-  "engines": { "node": ">=24" },
-  "exports": { ".": { "types": "./js/index.d.ts", "import": "./js/index.mjs" } },
-  "files": ["js/index.mjs", "js/index.d.ts", "dist/bridge.cjs", "dist/third-party", "docs", "README.md", "LICENSE"],
-  "devDependencies": { "typescript": "5.9.3" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/q0w1ertyuiop/SenWeave.git"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./js/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./js/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "js/index.mjs",
+    "js/index.cjs",
+    "dist/index.d.mts",
+    "dist/index.d.cts",
+    "dist/bridge.cjs",
+    "dist/third-party",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "devDependencies": {
+    "typescript": "5.9.3"
+  },
   "scripts": {
     "build": "node scripts/build_sdk.mjs",
     "prepack": "node scripts/build_sdk.mjs",
     "test:sdk": "node --test tests/sdk.test.mjs",
     "verify:package": "node scripts/check_npm_package.mjs"
-  }
+  },
+  "main": "./js/index.cjs",
+  "types": "./dist/index.d.cts"
 }

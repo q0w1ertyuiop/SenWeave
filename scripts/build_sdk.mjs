@@ -14,6 +14,8 @@ if (built.status !== 0) process.exit(built.status ?? 1);
 const code = readFileSync(join(root, '_build/js/release/build/cmd/bridge/bridge.js'), 'utf8');
 mkdirSync(join(root, 'dist'), { recursive: true });
 writeFileSync(join(root, 'dist/bridge.cjs'), `// SenWeave ${manifest.version} · Apache-2.0 · compiled from MoonBit\n${code}`);
+const declarations = readFileSync(join(root, 'js/index.d.ts'));
+for (const name of ['index.d.mts', 'index.d.cts']) writeFileSync(join(root, 'dist', name), declarations);
 const toolchain = process.env.MOON_HOME ?? join(homedir(), '.moon');
 const notices = join(root, 'dist/third-party');
 mkdirSync(notices, { recursive: true });

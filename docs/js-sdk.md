@@ -1,10 +1,10 @@
-# Node.js SDK · 0.1.0-dev.11
+# Node.js SDK · 0.1.0-dev.12
 
-SDK 为 Node.js 24 及以上提供 ESM 接口和 TypeScript 声明，解析、校验、展开和编码由编译后的 MoonBit 实现完成。宿主传递 JSON 原文或 `Uint8Array`，测量数值不会先经 JavaScript 对象转换。当前接口面向 Node.js，浏览器构建尚未提供。
+SDK 为 Node.js 24 及以上提供 ESM／CommonJS 入口和 TypeScript 声明，解析、校验、展开和编码由编译后的 MoonBit 实现完成。宿主传递 JSON 原文或 `Uint8Array`，测量数值不会先经 JavaScript 对象转换。当前接口面向 Node.js，浏览器构建尚未提供。
 
 ## 构建与安装本地分发包
 
-从源码构建需要 README 所列 MoonBit 工具链：
+从源码构建需要 README 所列 MoonBit 工具链；构建同时生成编译核心及两种模块格式的类型声明：
 
 ```sh
 moon update
@@ -14,13 +14,13 @@ npm run test:sdk
 npm run verify:package
 ```
 
-最后一条命令重新构建并打包，生成 `_build/npm/q0w1ertyuiop-senweave-0.1.0-dev.11.tgz`，随后在临时项目中离线安装该文件并验证运行与类型。将 `.tgz` 复制到自己的应用目录后：
+最后一条命令重新构建并打包，生成 `_build/npm/q0w1ertyuiop-senweave-0.1.0-dev.12.tgz`，随后在临时项目中离线安装该文件并验证运行与类型。将 `.tgz` 复制到自己的应用目录后：
 
 ```sh
-npm install ./q0w1ertyuiop-senweave-0.1.0-dev.11.tgz
+npm install ./q0w1ertyuiop-senweave-0.1.0-dev.12.tgz
 ```
 
-应用通过 `import { check, resolve, SenWeaveError } from '@q0w1ertyuiop/senweave'` 使用。分发包已经包含编译后的核心和必要许可，运行时无需 MoonBit、TypeScript 或额外 npm 包。当前验证针对本地压缩包，npm／Mooncakes 注册表正式发布仍待完成。
+应用可通过 `import` 或 `require()` 按包名加载，保留现有项目的模块配置。分发包已经包含编译后的核心和必要许可，运行时无需 MoonBit、TypeScript 或额外 npm 包。当前验证针对本地压缩包，npm／Mooncakes 注册表正式发布仍待完成。
 
 ## 调用方式
 
@@ -40,6 +40,17 @@ catch (error) {
   else throw error;
 }
 ```
+
+CommonJS 项目使用相同接口：
+
+```js
+const { check, resolve, SenWeaveError } = require('@q0w1ertyuiop/senweave');
+const input = '[{"n":"counter","v":9007199254740993,"t":1793000000}]';
+const wire = resolve(input, { to: 'cbor' });
+console.log(check(input).measurements, resolve(wire.data, { from: 'cbor' }).data);
+```
+
+两种入口共用同一份 CommonJS 实现，ESM 入口只转导出公开函数。在同一安装副本、同一进程中混用时，函数与 `SenWeaveError` 构造器保持相同引用，`instanceof` 可跨入口使用。公开 API 对象冻结；CommonJS 入口可以在禁用 `require(ESM)` 的 Node.js 进程中运行。
 
 | 项目 | 行为 |
 | --- | --- |
@@ -89,3 +100,6 @@ const result = resolve(input, { referenceTime: 1793000000, rejectExtensions: tru
 `SenWeaveError.code` 是错误码，`.diagnostic` 为冻结的诊断对象，包含固定说明及可用的 `record_index`、`field`、`line`、`column`。`field` 只保留标准 SenML 标签，未知扩展名和测量值均不回显；重复键仍保留可用的行列位置。源码未构建或编译核心缺少当前接口时返回 `BuildRequired`；分发消费验证会检查核心文件及接口确实可用。
 
 TypeScript 中默认 JSON 结果推导为 `string`，显式 `to: 'cbor'` 推导为 `Uint8Array`；动态格式返回可按 `format` 缩小的联合类型。分发检查使用 TypeScript 5.9.3 严格模式，既检查正确调用，也验证错误输入和未知参数会被类型检查拒绝。
+
+
+NodeNext 按 `import`／`require` 条件分别解析 `dist/index.d.mts` 与 `dist/index.d.cts`；普通 CommonJS／Node 模块解析使用顶层 `types`。两份声明均由 `js/index.d.ts` 构建生成，校验脚本核对它们与源声明一致。分发验证使用 TypeScript 5.9.3，检查两种 NodeNext 入口及 CommonJS／Node 配置，并确认实际选中的声明文件。条件导出与类型格式分别依据 [Node.js 包文档](https://nodejs.org/docs/latest-v24.x/api/packages.html#conditional-exports) 和 [TypeScript 模块参考](https://www.typescriptlang.org/docs/handbook/modules/reference.html#node16-node18-node20-nodenext)。

@@ -20,8 +20,8 @@ run(process.execPath, [join(root, 'scripts/build_sdk.mjs')], root);
 const packed = JSON.parse(run(process.execPath, [npm, 'pack', '--json', '--ignore-scripts', '--pack-destination', output], root))[0];
 const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const paths = packed.files.map(file => file.path);
-for (const path of paths) assert.ok(['package.json', 'README.md', 'LICENSE', 'js/index.mjs', 'js/index.d.ts', 'dist/bridge.cjs'].includes(path) || /^docs\/[A-Za-z0-9_-]+\.(md|svg)$/.test(path) || /^dist\/third-party\/(?:core-LICENSE|core-NOTICE|cbor-LICENSE)\.txt$/.test(path), `Unexpected packed entry: ${path}`);
-for (const path of ['js/index.mjs', 'js/index.d.ts', 'dist/bridge.cjs', 'dist/third-party/core-NOTICE.txt', 'dist/third-party/core-LICENSE.txt', 'dist/third-party/cbor-LICENSE.txt']) assert.ok(paths.includes(path), `Missing ${path}`);
+for (const path of paths) assert.ok(['package.json', 'README.md', 'LICENSE', 'js/index.mjs', 'js/index.cjs', 'dist/index.d.mts', 'dist/index.d.cts', 'dist/bridge.cjs'].includes(path) || /^docs\/[A-Za-z0-9_-]+\.(md|svg)$/.test(path) || /^dist\/third-party\/(?:core-LICENSE|core-NOTICE|cbor-LICENSE)\.txt$/.test(path), `Unexpected packed entry: ${path}`);
+for (const path of ['js/index.mjs', 'js/index.cjs', 'dist/index.d.mts', 'dist/index.d.cts', 'dist/bridge.cjs', 'dist/third-party/core-NOTICE.txt', 'dist/third-party/core-LICENSE.txt', 'dist/third-party/cbor-LICENSE.txt']) assert.ok(paths.includes(path), `Missing ${path}`);
 const directory = mkdtempSync(join(tmpdir(), 'senweave-npm-consumer-'));
 try {
   writeFileSync(join(directory, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
@@ -30,9 +30,17 @@ try {
     const text = readFileSync(join(directory, 'node_modules', manifest.name, path), 'utf8').replace(/https?:\/\/[^\s<>"']+/g, '');
     assert.equal(/(?<![A-Za-z])[A-Za-z]:[\\/]+[^\\/"\s]|file:\/\/|\/(?:Users|home)\/|AppData[\\/]/.test(text), false, `Local path in packed file: ${path}`);
   }
-  const consumer = `import assert from 'node:assert/strict';
-import {check, resolve, SenWeaveError} from '${manifest.name}';
-const input='[{"bn":"x:","bt":1793000000},{"n":"counter","v":9007199254740993}]';
+  const installed = join(directory, 'node_modules', manifest.name);
+  const installedManifest = JSON.parse(readFileSync(join(installed, 'package.json'), 'utf8'));
+  assert.deepEqual(installedManifest.exports, { '.': {
+    import: { types: './dist/index.d.mts', default: './js/index.mjs' },
+    require: { types: './dist/index.d.cts', default: './js/index.cjs' },
+  } });
+  assert.equal(installedManifest.main, './js/index.cjs');
+  assert.equal(installedManifest.types, './dist/index.d.cts');
+  const declarations = readFileSync(join(root, 'js/index.d.ts'), 'utf8');
+  for (const path of ['dist/index.d.mts', 'dist/index.d.cts']) assert.equal(readFileSync(join(installed, path), 'utf8'), declarations);
+  const consumer = `const input='[{"bn":"x:","bt":1793000000},{"n":"counter","v":9007199254740993}]';
 assert.equal(check(input).measurements,1);
 const cbor=resolve(input,{to:'cbor'});
 assert.ok(cbor.data instanceof Uint8Array);
@@ -43,10 +51,29 @@ assert.throws(()=>resolve(input,{limits:{maxOutputBytes:1}}),e=>e.code==='Output
 assert.throws(()=>check('[{"n":"x","v":1,"vendor":true}]',{rejectExtensions:true}),e=>e.code==='IgnoredExtensions');
 assert.throws(()=>check('[{"n":"x","v":1,"private-key_":true}]'),e=>e.code==='UnsupportedExtension' && !Object.hasOwn(e.diagnostic,'field'));
 console.log('installed-consumer: passed');`;
-  writeFileSync(join(directory, 'consumer.mjs'), consumer);
+  writeFileSync(join(directory, 'consumer.mjs'), `import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {check, resolve, SenWeaveError} from '${manifest.name}';
+const commonjs=createRequire(import.meta.url)('${manifest.name}');
+assert.equal(commonjs.check,check);
+assert.equal(commonjs.resolve,resolve);
+assert.equal(commonjs.SenWeaveError,SenWeaveError);
+assert.throws(()=>commonjs.check('[{"n":"x","v":1}]'),e=>e instanceof SenWeaveError);
+${consumer}`);
   run(process.execPath, ['consumer.mjs'], directory);
-  writeFileSync(join(directory, 'consumer.mts'), `import {check, resolve, type ResolveOptions, type ResourceLimits, SenWeaveError} from '${manifest.name}';
-const input='[]';
+  const legacy = join(directory, 'legacy');
+  mkdirSync(legacy);
+  writeFileSync(join(legacy, 'package.json'), JSON.stringify({ private: true, type: 'commonjs' }));
+  writeFileSync(join(legacy, 'consumer.js'), `const assert=require('node:assert/strict');
+const {check, resolve, SenWeaveError}=require('${manifest.name}');
+${consumer}
+import('${manifest.name}').then(module=>{
+  assert.equal(module.check,check);
+  assert.equal(module.SenWeaveError,SenWeaveError);
+  assert.throws(()=>module.check('[{"n":"x","v":1}]'),e=>e instanceof SenWeaveError);
+}).catch(error=>{console.error(error);process.exitCode=1;});`);
+  run(process.execPath, ['--no-experimental-require-module', 'consumer.js'], legacy);
+  const typing = `const input='[]';
 const json: string=resolve(input).data;
 const binary: Uint8Array=resolve(input,{to:'cbor'}).data;
 const count: number=check(input).measurements;
@@ -66,10 +93,20 @@ check(input,{limits:{maxRecords:'16'}});
 // @ts-expect-error unknown quotas are rejected
 check(input,{limits:{recordCount:16}});
 const errorCode: string=new SenWeaveError({code:'Example',message:'example'}).code;
-void [json,binary,count,wrong,errorCode];`);
-  run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--module', 'NodeNext', '--target', 'ES2022', 'consumer.mts'], directory);
+void [json,binary,count,wrong,errorCode];`;
+  writeFileSync(join(directory, 'consumer.mts'), `import {check, resolve, type ResolveOptions, type ResourceLimits, SenWeaveError} from '${manifest.name}';\n${typing}`);
+  writeFileSync(join(legacy, 'consumer.cts'), `import sdk = require('${manifest.name}');
+const {check, resolve, SenWeaveError}=sdk;
+type ResolveOptions=sdk.ResolveOptions;
+type ResourceLimits=sdk.ResourceLimits;
+${typing}`);
+  const tsc = join(root, 'node_modules/typescript/bin/tsc');
+  const listing = run(process.execPath, [tsc, '--noEmit', '--strict', '--module', 'NodeNext', '--target', 'ES2022', '--listFiles', 'consumer.mts', 'legacy/consumer.cts'], directory).replaceAll('\\', '/');
+  for (const path of ['dist/index.d.mts', 'dist/index.d.cts']) assert.ok(listing.includes(path), `TypeScript did not select ${path}`);
+  run(process.execPath, [tsc, '--noEmit', '--strict', '--module', 'CommonJS', '--moduleResolution', 'Node', '--target', 'ES2022', 'consumer.cts'], legacy);
   console.log(JSON.stringify({ package: manifest.name, version: manifest.version, files: paths.length,
-    runtimeConsumer: 'passed', typescriptConsumer: 'passed', integrity: packed.integrity, archive: `_build/npm/${packed.filename}` }));
+    runtimeConsumers: ['esm', 'commonjs', 'mixed-identity'], typescriptConsumers: ['NodeNext ESM', 'NodeNext CommonJS', 'CommonJS Node resolution'],
+    status: 'passed', integrity: packed.integrity, archive: `_build/npm/${packed.filename}` }));
 } finally {
   assert.equal(dirname(resolve(directory)), resolve(tmpdir()));
   rmSync(directory, { recursive: true, force: true });

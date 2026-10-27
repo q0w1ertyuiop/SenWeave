@@ -1,4 +1,4 @@
-# 分发产物与独立消费验证 · 0.1.0-dev.11
+# 分发产物与独立消费验证 · 0.1.0-dev.12
 
 仓库内的测试通过后，还需要确认拿到分发包的应用不依赖开发目录。当前保留两类实际产物：MoonBit 源码 ZIP 和包含编译核心的 npm `.tgz`。注册表正式发布尚未完成，此处不把本地归档消费等同于注册表安装。
 
@@ -22,8 +22,10 @@ npm run verify:package
 npm run test:sdk
 ```
 
-验证脚本先构建编译核心，再用 `npm pack` 得到真实压缩包，按 [npm `files` 清单](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/#files) 检查文件范围。在独立临时应用中通过本地 tarball 离线安装，禁用安装脚本，使用包名导入，核对完整校验、大整数和 CBOR 交换；随后以严格 NodeNext 模式检查 TypeScript 消费代码。类型检查对无效调用使用预期失败断言，声明文件出错或错误调用意外被接受都会使检查失败。
+验证脚本先构建编译核心，再用 `npm pack` 得到真实压缩包，按 [npm `files` 清单](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/#files) 检查文件范围。在独立临时应用中通过本地 tarball 离线安装，禁用安装脚本，分别使用 ESM 导入和 CommonJS 加载，核对完整校验、大整数、CBOR 交换及混合加载时的错误类型身份；CommonJS 运行检查禁用 `require(ESM)`。随后以严格 NodeNext 模式同时检查两种 TypeScript 消费代码，并额外检查 CommonJS／Node 模块解析配置。类型检查对无效调用使用预期失败断言，声明文件出错或错误调用意外被接受都会使检查失败。
+
+`import` 和 `require` 的类型条件分别指向构建生成的 `.d.mts`、`.d.cts`，两者使用同一份源声明。类型检查同时列出实际载入文件，确认两种格式均被消费。
 
 产物保留在 `_build/npm/`，输出包括实际 tarball 完整性值。`dist/bridge.cjs` 来自本次 MoonBit release 构建；源码构建版本与 npm 版本不一致时拒绝生成。分发内容包含 stdlib 与 CBOR 依赖的原始 LICENSE／NOTICE，构建时从实际依赖中复制。
 
-SDK 的 11 项测试覆盖严格 UTF-8、切片字节、扩展准入顺序、八项应用预算、选项属性、诊断脱敏和筛选。独立 npm 消费还检查预算、严格扩展策略和诊断行为，TypeScript 检查包含预算类型及未知预算项。CI 在 Windows 与 Linux 运行分发验证，源库原有三个后端的测试及 CLI／UDP／互操作任务继续保留。
+SDK 的 14 项测试包含两种模块入口的共享身份和无 ESM 加载依赖检查，并覆盖严格 UTF-8、切片字节、扩展准入顺序、八项应用预算、选项属性、诊断脱敏和筛选。独立 npm 消费还检查预算、严格扩展策略和诊断行为，TypeScript 检查包含预算类型及未知预算项。CI 在 Windows 与 Linux 运行分发验证，源库原有三个后端的测试及 CLI／UDP／互操作任务继续保留。

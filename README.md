@@ -4,7 +4,7 @@
 
 面向 MoonBit 物联网应用的 SenML 测量数据语义与 JSON／CBOR 交换库。
 
-**当前阶段：SenML JSON／CBOR 库、Node.js SDK、离线工具与 CoAP 收发适配器，版本 `0.1.0-dev.11`。** 支持带资源上限的解析、基字段展开、独立记录输出及存储后应答。业务键可识别跨重启重试并拒绝负载冲突。npm 本地压缩包已通过独立运行与 TypeScript 消费验证，MoonBit 源码归档已通过三个后端的独立模块验证；注册表正式发布和 MQTT 集成尚未完成。
+**当前阶段：SenML JSON／CBOR 库、Node.js SDK、离线工具与 CoAP 收发适配器，版本 `0.1.0-dev.12`。** 支持带资源上限的解析、基字段展开、独立记录输出及存储后应答。业务键可识别跨重启重试并拒绝负载冲突。npm 本地压缩包已通过独立运行与 TypeScript 消费验证，MoonBit 源码归档已通过三个后端的独立模块验证；注册表正式发布和 MQTT 集成尚未完成。
 
 SenML 数据包里的测量记录可以继承此前出现的设备名称、基准时间、单位和基准数值。记录从原数据包取出前，需要先应用这些信息，才能安全地独立保存或筛选。项目依据 [RFC 8428](https://www.rfc-editor.org/rfc/rfc8428.html)，为设备网关、采集服务和离线工具提供这层共享能力。
 
@@ -34,7 +34,7 @@ CI 针对 Windows、Linux 和 `native`、`js`、`wasm-gc` 三个后端运行相�
 
 ## 在 Node.js 应用中调用
 
-从源码构建后可通过 ESM 调用，输入使用 JSON 原文或字节，测量数字不先转成 JavaScript `Number`：
+从源码构建后可通过 ESM 或 CommonJS 调用，输入使用 JSON 原文或字节，测量数字不先转成 JavaScript `Number`：
 
 ```sh
 npm ci --ignore-scripts --no-audit --no-fund
@@ -54,6 +54,8 @@ console.log(summary.measurements, json.data);
 ```
 
 `check` 验证完整展开，`resolve` 返回 JSON 文本或 CBOR 字节及扩展丢弃数量。`SenWeaveError` 提供固定诊断；相对时间需要显式 `referenceTime`。SDK 随本地 `.tgz` 携带编译后的 MoonBit 核心，消费项目只需 Node.js，无额外 npm 运行时依赖。接口、类型和边界见 [SDK 说明](docs/js-sdk.md)，两种归档的消费检查见 [分发验证](docs/distribution.md)。
+
+CommonJS 应用可用 `const { check, resolve } = require('@q0w1ertyuiop/senweave')` 加载已安装分发包；两种入口共享函数和错误类型。
 
 应用可用 `limits: { maxInputBytes: 8192, maxRecords: 16 }` 收紧单次调用预算，并设置展开和输出上限。`rejectExtensions: true` 在展开前拒绝扩展丢弃；错误诊断只保留标准字段名，避免把应用扩展名称写入日志。
 

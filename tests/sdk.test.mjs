@@ -1,9 +1,39 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import { spawnSync } from 'node:child_process';
 import { check, resolve, SenWeaveError } from '../js/index.mjs';
+
+const require = createRequire(import.meta.url);
+const commonjs = require('../js/index.cjs');
 
 const source = '[{"bn":"sensor:","bt":1793000000},{"n":"counter","v":18446744073709551615},{"n":"door","vb":false}]';
 const rejected = code => error => error instanceof SenWeaveError && error.code === code && error.diagnostic.code === code;
+
+test('ESM and CommonJS share functions and error identity in one process', () => {
+  assert.equal(commonjs.check, check);
+  assert.equal(commonjs.resolve, resolve);
+  assert.equal(commonjs.SenWeaveError, SenWeaveError);
+  assert.equal(Object.isFrozen(commonjs), true);
+  assert.throws(() => commonjs.check('[{"n":"x","v":1}]'), rejected('MissingReferenceTime'));
+  assert.throws(() => check('[{"n":"x","v":1}]'), error => error instanceof commonjs.SenWeaveError);
+  assert.equal(commonjs.resolve(source, { to: 'cbor' }).data instanceof Uint8Array, true);
+});
+
+test('package conditional exports route both consumers to the shared SDK', async () => {
+  const imported = await import('@q0w1ertyuiop/senweave');
+  const required = require('@q0w1ertyuiop/senweave');
+  assert.equal(imported.check, required.check);
+  assert.equal(imported.SenWeaveError, required.SenWeaveError);
+  assert.deepEqual(required.check(source), check(source));
+});
+
+test('CommonJS SDK does not rely on loading ESM through require', () => {
+  const runtime = spawnSync(process.execPath, ['--no-experimental-require-module', '-e',
+    'const sdk=require("@q0w1ertyuiop/senweave"); if(sdk.check("[]").valid!==true)process.exit(1);'],
+  { cwd: new URL('../', import.meta.url), encoding: 'utf8' });
+  assert.equal(runtime.status, 0, runtime.stderr);
+});
 
 test('SDK validates complete resolution and returns explicit metadata', () => {
   assert.deepEqual(check(source), { valid: true, stage: 'resolved', rawRecords: 3, measurements: 2, ignoredExtensions: 0 });
