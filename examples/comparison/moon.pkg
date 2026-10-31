@@ -1,0 +1,10 @@
+import {
+  "q0w1ertyuiop/senweave",
+  "moonbitlang/core/encoding/hex",
+}
+
+pkgtype(kind: "executable")
+
+options(
+  link: { "js": { "exports": [ "compare_payload" ], "format": "cjs" } },
+)

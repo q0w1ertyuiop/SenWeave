@@ -1,0 +1,334 @@
+{
+  "binary-data/json": {
+    "stages": [
+      "raw_cbor",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "DataValue is a Go string; CBOR encoding emits text instead of a definite byte string (RFC 8428 section 6)."
+  },
+  "binary-data/cbor": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "standard-semantics",
+    "reason": "The standard byte-string DataValue cannot decode into the pinned Go string field."
+  },
+  "base-value-inheritance/json": {
+    "stages": [
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Normalize applies bv only from the current record and omits its inherited value in later records."
+  },
+  "base-value-inheritance/cbor": {
+    "stages": [
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Normalize applies bv only from the current record and omits its inherited value in later records."
+  },
+  "base-value-reset/json": {
+    "stages": [
+      "raw_json",
+      "raw_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "omitempty drops explicit bv=0 from the raw encoding, changing later resolution."
+  },
+  "base-value-reset/cbor": {
+    "stages": [
+      "raw_json",
+      "raw_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "omitempty drops explicit bv=0 from the raw encoding, changing later resolution."
+  },
+  "base-name-reset/json": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An empty bn is treated as absent, retaining the preceding base name."
+  },
+  "base-name-reset/cbor": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An empty bn is treated as absent, retaining the preceding base name."
+  },
+  "base-time-reset/json": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit bt=0 is treated as absent, retaining the preceding base time."
+  },
+  "base-time-reset/cbor": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit bt=0 is treated as absent, retaining the preceding base time."
+  },
+  "relative-time/json": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit bt=0 is treated as absent, retaining the preceding base time."
+  },
+  "relative-time/cbor": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit bt=0 is treated as absent, retaining the preceding base time."
+  },
+  "base-unit-reset/json": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit empty unit/base unit is treated as absent, retaining the preceding base unit."
+  },
+  "base-unit-reset/cbor": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit empty unit/base unit is treated as absent, retaining the preceding base unit."
+  },
+  "unit-empty-override/json": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit empty unit/base unit is treated as absent, retaining the preceding base unit."
+  },
+  "unit-empty-override/cbor": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit empty unit/base unit is treated as absent, retaining the preceding base unit."
+  },
+  "base-sum-inheritance/json": {
+    "stages": [
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Normalize only emits s when a regular s was present; the inherited bs alone is lost."
+  },
+  "base-sum-inheritance/cbor": {
+    "stages": [
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Normalize only emits s when a regular s was present; the inherited bs alone is lost."
+  },
+  "base-sum-reset/json": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit bs=0 is treated as absent, retaining the preceding base sum."
+  },
+  "base-sum-reset/cbor": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit bs=0 is treated as absent, retaining the preceding base sum."
+  },
+  "context-record/json": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "standard-semantics",
+    "reason": "The base-only context record, as in RFC 8428 section 5.1.7, is rejected for lacking a value."
+  },
+  "context-record/cbor": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "standard-semantics",
+    "reason": "The base-only context record, as in RFC 8428 section 5.1.7, is rejected for lacking a value."
+  },
+  "mandatory-extension/json": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Unknown underscore-suffixed labels are ignored instead of rejected (RFC 8428 section 4.4)."
+  },
+  "mandatory-extension/cbor": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Unknown underscore-suffixed labels are ignored instead of rejected (RFC 8428 section 4.4)."
+  },
+  "duplicate-member/json": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "ingress-policy",
+    "reason": "Go JSON decoding keeps the last duplicate member; SenWeave rejects duplicates."
+  },
+  "unknown-version/json": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "version-policy",
+    "reason": "Go carries bver=99 without an unsupported-feature check; SenWeave currently supports version 10."
+  },
+  "unknown-version/cbor": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "version-policy",
+    "reason": "Go carries bver=99 without an unsupported-feature check; SenWeave currently supports version 10."
+  },
+  "uppercase-exponent/json": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Go accepts uppercase E; SenML JSON requires lowercase e (RFC 8428 section 5)."
+  },
+  "integer-53/json": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "numeric-representation",
+    "reason": "Go uses binary64 and loses exact integer representation. Binary64 equivalence is checked separately; exact integer preservation is an additional SenWeave capability."
+  },
+  "integer-53/cbor": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "numeric-representation",
+    "reason": "Go uses binary64 and loses exact integer representation. Binary64 equivalence is checked separately; exact integer preservation is an additional SenWeave capability."
+  },
+  "uint64-max/json": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "numeric-representation",
+    "reason": "Go uses binary64 and loses exact integer representation. Binary64 equivalence is checked separately; exact integer preservation is an additional SenWeave capability."
+  },
+  "uint64-max/cbor": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "numeric-representation",
+    "reason": "Go uses binary64 and loses exact integer representation. Binary64 equivalence is checked separately; exact integer preservation is an additional SenWeave capability."
+  },
+  "negative-cbor-min/json": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json"
+    ],
+    "classification": "numeric-representation",
+    "reason": "The JSON spelling changes after binary64 formatting. The CBOR float still represents -2^64 exactly; this is a representation distinction, not evidence of a different binary64 measurement."
+  },
+  "negative-cbor-min/cbor": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "standard-semantics",
+    "reason": "The pinned CBOR decoder rejects the valid major-type-1 value -2^64 when converting through int64."
+  },
+  "base-value-on-sum/json": {
+    "stages": [
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Normalize does not apply bv when a sum-only measurement has no regular v (RFC 8428 section 4.5.4)."
+  },
+  "base-value-on-sum/cbor": {
+    "stages": [
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Normalize does not apply bv when a sum-only measurement has no regular v (RFC 8428 section 4.5.4)."
+  },
+  "integral-version-decimal/json": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "standard-semantics",
+    "reason": "JSON 10.0 has an integral value; Go uint decoding accepts only integer lexical form."
+  },
+  "decimal-tag-four/cbor": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "standard-semantics",
+    "reason": "The pinned Go decoder cannot convert the standard Tag 4 decimal fraction to its float64 value."
+  },
+  "arithmetic-overflow/json": {
+    "stages": [
+      "failure_stage"
+    ],
+    "classification": "failure-stage",
+    "reason": "SenWeave rejects non-finite addition during resolve. Go Normalize succeeds with +Inf; its JSON encoder rejects the result later."
+  }
+}

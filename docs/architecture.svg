@@ -23,7 +23,7 @@
       <text x="60" y="287">Bounded wire reader + types</text><text x="60" y="313">Duplicate labels + limits</text><text x="60" y="339">Reused float / scalar codec</text>
       <text x="330" y="287">Values + context records</text><text x="330" y="313">Exact source numbers</text><text x="330" y="339">Original order retained</text>
       <text x="600" y="287">Explicit reference clock</text><text x="600" y="313">Finite arithmetic + budget</text><text x="600" y="339">Stable time ordering</text>
-      <text x="870" y="287">Filter + source indexes</text><text x="870" y="313">Standalone JSON / CBOR</text><text x="870" y="339">Gateway + cbor2 checks</text>
+      <text x="870" y="287">Filter + source indexes</text><text x="870" y="313">Standalone JSON / CBOR</text><text x="870" y="339">Go + Python fixture checks</text>
     </g>
     <g stroke="#758397" stroke-width="2" marker-end="url(#arrow)"><path d="M268 295h32"/><path d="M538 295h32"/><path d="M808 295h32"/></g>
     <rect x="42" y="398" width="1036" height="64" rx="12" fill="#e0f6ef" stroke="#14775d" stroke-width="2"/>

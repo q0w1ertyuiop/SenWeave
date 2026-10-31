@@ -1,0 +1,629 @@
+{
+  "schema": 1,
+  "reference_time": 1793000000,
+  "cases": [
+    {
+      "id": "numeric-absolute",
+      "spec": "8428-4.2",
+      "input": "[{\"n\":\"temperature\",\"v\":22.5,\"u\":\"Cel\",\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "temperature",
+          "v": 22.5,
+          "u": "Cel",
+          "t": 1793000000
+        }
+      ],
+      "python": {
+        "values": [
+          22.5
+        ]
+      }
+    },
+    {
+      "id": "numeric-zero",
+      "spec": "8428-4.2",
+      "input": "[{\"n\":\"zero\",\"v\":0,\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "zero",
+          "v": 0,
+          "t": 1793000000
+        }
+      ],
+      "python": {
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "id": "boolean-false",
+      "spec": "8428-4.2",
+      "input": "[{\"n\":\"door\",\"vb\":false,\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "door",
+          "vb": false,
+          "t": 1793000000
+        }
+      ],
+      "python": {
+        "values": [
+          false
+        ]
+      }
+    },
+    {
+      "id": "empty-text",
+      "spec": "8428-4.2",
+      "input": "[{\"n\":\"label\",\"vs\":\"\",\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "label",
+          "vs": "",
+          "t": 1793000000
+        }
+      ],
+      "python": {
+        "error": "NameError"
+      }
+    },
+    {
+      "id": "unicode-text",
+      "spec": "8428-5",
+      "input": "[{\"n\":\"label\",\"vs\":\"门\\n🚪\",\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "label",
+          "vs": "门\n🚪",
+          "t": 1793000000
+        }
+      ],
+      "python": {
+        "error": "NameError"
+      }
+    },
+    {
+      "id": "binary-data",
+      "spec": "8428-4.3",
+      "input": "[{\"n\":\"blob\",\"vd\":\"AP8\",\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "blob",
+          "vd": "AP8",
+          "t": 1793000000
+        }
+      ],
+      "python": {
+        "error": "KeyError"
+      }
+    },
+    {
+      "id": "sum-only",
+      "spec": "8428-4.5.4",
+      "input": "[{\"n\":\"energy\",\"s\":105,\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "energy",
+          "s": 105,
+          "t": 1793000000
+        }
+      ],
+      "python": {
+        "values": [
+          null
+        ]
+      }
+    },
+    {
+      "id": "value-and-sum",
+      "spec": "8428-4.2",
+      "input": "[{\"n\":\"energy\",\"v\":2,\"s\":105,\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "energy",
+          "v": 2,
+          "s": 105,
+          "t": 1793000000
+        }
+      ],
+      "python": {
+        "values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "base-name",
+      "spec": "8428-4.5.1",
+      "input": "[{\"bn\":\"device:\",\"n\":\"one\",\"v\":1,\"bt\":1793000000},{\"n\":\"two\",\"vb\":false}]",
+      "expected": [
+        {
+          "n": "device:one",
+          "v": 1,
+          "t": 1793000000
+        },
+        {
+          "n": "device:two",
+          "vb": false,
+          "t": 1793000000
+        }
+      ],
+      "python": {
+        "values": [
+          1,
+          false
+        ]
+      }
+    },
+    {
+      "id": "base-value-inheritance",
+      "spec": "8428-4.1",
+      "input": "[{\"bn\":\"device:\",\"n\":\"one\",\"v\":1,\"bv\":20,\"bt\":1793000000},{\"n\":\"two\",\"v\":2}]",
+      "expected": [
+        {
+          "n": "device:one",
+          "v": 21,
+          "t": 1793000000
+        },
+        {
+          "n": "device:two",
+          "v": 22,
+          "t": 1793000000
+        }
+      ],
+      "python": {
+        "values": [
+          21,
+          22
+        ]
+      }
+    },
+    {
+      "id": "base-value-reset",
+      "spec": "8428-4.1",
+      "input": "[{\"n\":\"one\",\"v\":1,\"bv\":20,\"bt\":1793000000},{\"n\":\"two\",\"v\":2,\"bv\":0},{\"n\":\"three\",\"v\":3}]",
+      "expected": [
+        {
+          "n": "one",
+          "v": 21,
+          "t": 1793000000
+        },
+        {
+          "n": "two",
+          "v": 2,
+          "t": 1793000000
+        },
+        {
+          "n": "three",
+          "v": 3,
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "base-name-reset",
+      "spec": "8428-4.1",
+      "input": "[{\"bn\":\"device:\",\"n\":\"one\",\"v\":1,\"bt\":1793000000},{\"bn\":\"\",\"n\":\"two\",\"v\":2}]",
+      "expected": [
+        {
+          "n": "device:one",
+          "v": 1,
+          "t": 1793000000
+        },
+        {
+          "n": "two",
+          "v": 2,
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "base-time-reset",
+      "spec": "8428-4.5.3",
+      "input": "[{\"n\":\"one\",\"v\":1,\"bt\":1792999900},{\"n\":\"two\",\"v\":2,\"bt\":0,\"t\":-3}]",
+      "expected": [
+        {
+          "n": "one",
+          "v": 1,
+          "t": 1792999900
+        },
+        {
+          "n": "two",
+          "v": 2,
+          "t": 1792999997
+        }
+      ]
+    },
+    {
+      "id": "base-unit-reset",
+      "spec": "8428-4.5.2",
+      "input": "[{\"n\":\"one\",\"v\":1,\"bu\":\"Cel\",\"bt\":1793000000},{\"n\":\"two\",\"v\":2,\"bu\":\"\"}]",
+      "expected": [
+        {
+          "n": "one",
+          "v": 1,
+          "u": "Cel",
+          "t": 1793000000
+        },
+        {
+          "n": "two",
+          "v": 2,
+          "u": "",
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "unit-empty-override",
+      "spec": "8428-4.5.2",
+      "input": "[{\"n\":\"one\",\"v\":1,\"bu\":\"Cel\",\"u\":\"\",\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "one",
+          "v": 1,
+          "u": "",
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "base-sum-inheritance",
+      "spec": "8428-4.5.4",
+      "input": "[{\"n\":\"one\",\"v\":1,\"bs\":100,\"bt\":1793000000},{\"n\":\"two\",\"s\":2}]",
+      "expected": [
+        {
+          "n": "one",
+          "v": 1,
+          "s": 100,
+          "t": 1793000000
+        },
+        {
+          "n": "two",
+          "s": 102,
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "base-sum-reset",
+      "spec": "8428-4.1",
+      "input": "[{\"n\":\"one\",\"s\":1,\"bs\":100,\"bt\":1793000000},{\"n\":\"two\",\"s\":2,\"bs\":0},{\"n\":\"three\",\"s\":3}]",
+      "expected": [
+        {
+          "n": "one",
+          "s": 101,
+          "t": 1793000000
+        },
+        {
+          "n": "two",
+          "s": 2,
+          "t": 1793000000
+        },
+        {
+          "n": "three",
+          "s": 3,
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "relative-time",
+      "spec": "8428-4.5.3",
+      "input": "[{\"n\":\"past\",\"v\":1,\"bt\":-10,\"t\":2},{\"n\":\"now\",\"v\":2,\"bt\":0}]",
+      "expected": [
+        {
+          "n": "past",
+          "v": 1,
+          "t": 1792999992
+        },
+        {
+          "n": "now",
+          "v": 2,
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "chronological-order",
+      "spec": "8428-4.6",
+      "input": "[{\"n\":\"later\",\"v\":1,\"t\":1793000010},{\"n\":\"same1\",\"v\":2,\"t\":1793000000},{\"n\":\"same2\",\"v\":3,\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "same1",
+          "v": 2,
+          "t": 1793000000
+        },
+        {
+          "n": "same2",
+          "v": 3,
+          "t": 1793000000
+        },
+        {
+          "n": "later",
+          "v": 1,
+          "t": 1793000010
+        }
+      ]
+    },
+    {
+      "id": "context-record",
+      "spec": "8428-5.1.7",
+      "input": "[{\"bn\":\"device:\",\"bv\":20,\"bt\":1793000000},{\"n\":\"one\",\"v\":1}]",
+      "expected": [
+        {
+          "n": "device:one",
+          "v": 21,
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "ordinary-extension",
+      "spec": "8428-4.4",
+      "input": "[{\"n\":\"one\",\"v\":1,\"vendor\":{\"revision\":2},\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "one",
+          "v": 1,
+          "t": 1793000000
+        }
+      ],
+      "python": {
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "mandatory-extension",
+      "spec": "8428-4.4",
+      "input": "[{\"n\":\"one\",\"v\":1,\"vendor_\":true}]",
+      "error": "UnsupportedExtension",
+      "python": {
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "conflicting-values",
+      "spec": "8428-4.2",
+      "input": "[{\"n\":\"one\",\"v\":1,\"vb\":false}]",
+      "error": "ConflictingValues",
+      "python": {
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "missing-value",
+      "spec": "8428-4.2",
+      "input": "[{\"n\":\"one\"}]",
+      "error": "MissingValue",
+      "python": {
+        "values": [
+          null
+        ]
+      }
+    },
+    {
+      "id": "invalid-name",
+      "spec": "8428-4.5.1",
+      "input": "[{\"n\":\"bad name\",\"v\":1}]",
+      "error": "InvalidName",
+      "python": {
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "null-value",
+      "spec": "8428-4.3",
+      "input": "[{\"n\":\"one\",\"v\":null}]",
+      "error": "WrongType",
+      "python": {
+        "values": [
+          null
+        ]
+      }
+    },
+    {
+      "id": "duplicate-member",
+      "spec": "senweave-duplicate-policy",
+      "formats": [
+        "json"
+      ],
+      "input": "[{\"n\":\"one\",\"v\":1,\"v\":2}]",
+      "error": "DuplicateKey",
+      "python": {
+        "values": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "unknown-version",
+      "spec": "8428-4.4",
+      "input": "[{\"n\":\"one\",\"v\":1,\"bver\":99}]",
+      "error": "UnsupportedVersion",
+      "python": {
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "uppercase-exponent",
+      "spec": "8428-5",
+      "formats": [
+        "json"
+      ],
+      "input": "[{\"n\":\"one\",\"v\":1E1}]",
+      "error": "InvalidNumber",
+      "python": {
+        "values": [
+          10
+        ]
+      }
+    },
+    {
+      "id": "integer-53",
+      "spec": "number-text-preservation",
+      "input": "[{\"n\":\"counter\",\"v\":9007199254740993,\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "counter",
+          "v": 9007199254740993,
+          "t": 1793000000
+        }
+      ],
+      "python": {
+        "values": [
+          9007199254740993
+        ]
+      }
+    },
+    {
+      "id": "uint64-max",
+      "spec": "8949-3.1",
+      "input": "[{\"n\":\"counter\",\"v\":18446744073709551615,\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "counter",
+          "v": 18446744073709551615,
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "negative-cbor-min",
+      "spec": "8949-3.1",
+      "input": "[{\"n\":\"counter\",\"v\":-18446744073709551616,\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "counter",
+          "v": -18446744073709551616,
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "update-interval",
+      "spec": "8428-4.2",
+      "input": "[{\"n\":\"one\",\"v\":1,\"bt\":1793000000,\"ut\":30}]",
+      "expected": [
+        {
+          "n": "one",
+          "v": 1,
+          "t": 1793000000,
+          "ut": 30
+        }
+      ],
+      "python": {
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "base-value-on-sum",
+      "spec": "8428-4.5.4",
+      "input": "[{\"n\":\"one\",\"s\":1,\"bv\":20,\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "one",
+          "s": 1,
+          "v": 20,
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "arithmetic-overflow",
+      "spec": "senweave-binary64-profile",
+      "formats": [
+        "json"
+      ],
+      "input": "[{\"n\":\"one\",\"v\":1e308,\"bv\":1e308,\"t\":1793000000}]",
+      "error": "ArithmeticOverflow",
+      "error_stage": "resolve"
+    },
+    {
+      "id": "integral-version-decimal",
+      "spec": "8428-4.1",
+      "input": "[{\"n\":\"one\",\"v\":1,\"bver\":10.0,\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "one",
+          "v": 1,
+          "t": 1793000000
+        }
+      ],
+      "formats": [
+        "json"
+      ]
+    },
+    {
+      "id": "indefinite-record-map",
+      "spec": "8428-6",
+      "formats": [
+        "cbor"
+      ],
+      "input": "[{\"n\":\"x\",\"v\":1}]",
+      "cbor_hex": "81bf0061780201ff",
+      "expected": [
+        {
+          "n": "x",
+          "v": 1,
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "nonpreferred-integer-width",
+      "spec": "8949-4.1",
+      "formats": [
+        "cbor"
+      ],
+      "input": "[{\"n\":\"x\",\"v\":1}]",
+      "cbor_hex": "81a2006178021801",
+      "expected": [
+        {
+          "n": "x",
+          "v": 1,
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "decimal-tag-four",
+      "spec": "8428-6",
+      "formats": [
+        "cbor"
+      ],
+      "input": "[{\"n\":\"x\",\"v\":1.25}]",
+      "cbor_hex": "81a200617802c48221187d",
+      "expected": [
+        {
+          "n": "x",
+          "v": 1.25,
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "cbor-float-version",
+      "spec": "8428-6",
+      "formats": [
+        "cbor"
+      ],
+      "input": "[{\"n\":\"x\",\"v\":1}]",
+      "cbor_hex": "81a3006178020120f94900",
+      "error": "WrongType"
+    }
+  ]
+}

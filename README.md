@@ -4,7 +4,7 @@
 
 面向 MoonBit 的 SenML 解析、语义展开与互操作库。
 
-**当前阶段：SenML JSON／CBOR 库、Node.js SDK、离线工具与 CoAP 收发适配器，版本 `0.1.0-dev.13`。** 支持带资源上限的解析、基字段展开、独立记录输出及存储后应答。业务键可识别跨重启重试并拒绝负载冲突。npm 本地压缩包已通过独立运行与 TypeScript 消费验证，MoonBit 源码归档已通过三个后端的独立模块验证；注册表正式发布和 MQTT 集成尚未完成。
+**当前阶段：SenML JSON／CBOR 库、Node.js SDK、离线工具与 CoAP 收发适配器，版本 `0.1.0-dev.14`。** 支持带资源上限的解析、基字段展开、独立记录输出及存储后应答。业务键可识别跨重启重试并拒绝负载冲突。npm 本地压缩包已通过独立运行与 TypeScript 消费验证，MoonBit 源码归档已通过三个后端的独立模块验证；注册表正式发布和 MQTT 集成尚未完成。
 
 SenML 数据包里的测量记录可以继承此前出现的设备名称、基准时间、单位和基准数值。记录从原数据包取出前，需要先应用这些信息，才能安全地独立保存或筛选。项目依据 [RFC 8428](https://www.rfc-editor.org/rfc/rfc8428.html)，为设备网关、采集服务和离线工具提供这层共享能力。
 
@@ -32,7 +32,9 @@ moon run examples/cbor --target js
 
 `examples/cbor` 输出原始包与展开包的 CBOR 十六进制，以及展开后的 JSON。可通过 `-- --hex <十六进制>` 传入外部 CBOR 数据。
 
-CI 针对 Windows、Linux 和 `native`、`js`、`wasm-gc` 三个后端运行相同测试与示例，另设两平台 CLI／UDP 检查与 Python 互操作任务。测试范围与复现命令见 [离线工具](docs/cli.md)、[传输接入](docs/transport.md) 和 [互操作范围](docs/interoperability.md)。
+CI 针对 Windows、Linux 和 `native`、`js`、`wasm-gc` 三个后端运行相同测试与示例，另设两平台 CLI／UDP、分发、Python 互操作与 Go／Python 共同样本任务。
+
+固定版本的跨语言对照已运行 40 组、72 项 JSON／CBOR 用例，分别核对解码校验、原始编码、展开和数值表示。完整输入、实际输出与差异分类由脚本生成，CI 保存结果 artifact。测试范围与命令见 [参考实现比较](docs/comparison.md)、[离线工具](docs/cli.md)、[传输接入](docs/transport.md) 和 [互操作范围](docs/interoperability.md)。
 
 ## 在 Node.js 应用中调用
 

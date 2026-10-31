@@ -1,4 +1,4 @@
-# SenML 能力与标准覆盖 · 0.1.0-dev.13
+# SenML 能力与标准覆盖 · 0.1.0-dev.14
 
 本表区分已实现能力、已知缺口和后续目标。标准基线为 [RFC 8428](https://www.rfc-editor.org/rfc/rfc8428.html)；版本特征、单位和内容格式扩展分别记录。JSON／CBOR 的现有实现仍需继续补充条款与用例对应关系，当前没有宣称全部 SenML 表示均已完成。
 
@@ -38,6 +38,6 @@
 
 ## 验证方式
 
-`cbor_compat_test.mbt` 覆盖编码变体、负整数范围、配额、截断与扩展结构；`encode_json_test.mbt` 覆盖原始包往返和输出预算。外部 `cbor2 5.7.1` 另核对六类输入表示的原始 JSON、原始 CBOR、展开 JSON 与展开 CBOR。消费接口也进入实际归档检查。
+`cbor_compat_test.mbt` 覆盖编码变体、负整数范围、配额、截断与扩展结构；`encode_json_test.mbt` 覆盖原始包往返和输出预算。外部 `cbor2 5.7.1` 另核对六类输入表示的原始 JSON、原始 CBOR、展开 JSON 与展开 CBOR。Go／Python 共同样本已实际运行 40 组、72 项，关联条款、固定期望及各阶段输出；Go 对照覆盖校验、原始编码和 Normalize，Python 按值更新 API 的实际范围记录。消费接口也进入实际归档检查。
 
 后续以每项标准能力的实现与证据对应情况更新本表。跨语言对照的版本、阶段与差异见 [参考实现比较](comparison.md)和[互操作记录](interoperability.md)。

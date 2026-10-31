@@ -1,4 +1,4 @@
-# 已验证的互操作范围 · 0.1.0-dev.13
+# 已验证的互操作范围 · 0.1.0-dev.14
 
 这份记录区分通用 CBOR 编码交换与外部 SenML 库的语义交换。测试使用未修改的已发布版本，公共脚本保留实际断言。
 
@@ -14,6 +14,12 @@ python scripts/check_cbor_interop.py --target js
 其余目标将 `js` 换为 `native` 或 `wasm-gc`。这是编码交换与指定场景的检查，`cbor2` 不承担 SenML 语义校验。
 
 `0.1.0-dev.13` 另外通过 `cbor2` 验证六类输入表示：不定长记录映射、非首选参数宽度、Int64 以下的三类负整数边界和分块名称。每类都核对原始 JSON、原始 CBOR、展开 JSON 与展开 CBOR，基本整数保持准确值。此项仍是独立 CBOR 与预期测量的核对，不代替其他 SenML 库的完整语义对照。
+
+## Go／Python 共同样本
+
+`scripts/senml_comparison/run.py` 固定 Go `absmach/senml` 提交 `40cd806e5f63` 与 Python `kpn-senml 1.0.1`，用 40 组、72 项共同输入分别核对解码校验、原始编码与展开。SenWeave 的 72 项满足固定期望；Go 33 项结果一致，39 项记录了具体阶段和原因；Python 的 40 次输入更新中，34 次更新和 6 次已知异常均按预期复现。相对时刻由测试宿主显式对齐，整数表示与 binary64 等价单列。
+
+共同样本包含错误输入和定向边界，结果数量不表示整体缺陷率。Go／Python 的接口范围、阶段对应、逐项差异、复现入口和 CI artifact 见 [参考实现比较](comparison.md)。以下 KPN 五条交换流程继续独立保留，未与共同样本混合计数。
 
 ## KPN SenML 1.0.1
 
@@ -61,4 +67,4 @@ python scripts/check_coap_interop.py --storage
 
 Node 测试另外验证数据库锁定和行配额返回 `5.00`、已有账本重开、跨重启重试保留首次时间、两个采集进程共享账本不重复写入、满额时已存请求仍成功，以及旧账本格式升级失败回滚。拒绝其他应用数据库时字节不变。一键演示通过 4 次真实 UDP 请求展示同样的重启与冲突流程，见 [演示说明](demo.md)。
 
-跨重启业务幂等由上述 Node UDP 测试验证；当前测试尚未覆盖公网、DTLS、真实硬件设备或持续丢包压力。[absmach/senml](https://github.com/absmach/senml) 已阅读其展开实现，尚未运行；更多版本与 RFC 全部示例需要后续覆盖。
+跨重启业务幂等由上述 Node UDP 测试验证；当前测试尚未覆盖公网、DTLS、真实硬件设备或持续丢包压力。更多 SenML 实现版本与 RFC 全部示例需要后续覆盖。
