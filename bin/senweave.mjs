@@ -8,8 +8,8 @@ const MAX_INPUT = 1_048_576;
 const MAX_OUTPUT = 4_194_304;
 const help = `SenWeave — check and resolve SenML files
 Usage: node bin/senweave.mjs <check|resolve> [FILE|-] [options]
-  --from json|cbor     Input format (default: json)
-  --to json|cbor       Resolved output format (default: json)
+  --from json|cbor|xml Input format (default: json)
+  --to json|cbor|xml   Resolved output format (default: json)
   --now SECONDS        Explicit reference for relative times
   --name FULL_NAME     Select an exact resolved measurement name
   --output FILE       Create a new file; existing files are never overwritten
@@ -43,7 +43,7 @@ function argumentsFor(argv) {
     if ((!literal && arg.startsWith('-') && arg !== '-') || positional) throw new Failure('Usage', 'Unknown option or extra input file.');
     positional = true; options.file = arg;
   }
-  if (!['json', 'cbor'].includes(options.from) || !['json', 'cbor'].includes(options.to)) throw new Failure('Usage', 'Formats must be json or cbor.');
+  if (!['json', 'cbor', 'xml'].includes(options.from) || !['json', 'cbor', 'xml'].includes(options.to)) throw new Failure('Usage', 'Formats must be json, cbor or xml.');
   if (seen.has('--now') && !/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(options.now)) throw new Failure('Usage', '--now requires a decimal timestamp.');
   if (seen.has('--name') && !options.name) throw new Failure('Usage', '--name cannot be empty.');
   if (options.output === '') throw new Failure('Usage', '--output cannot be empty.');

@@ -25,6 +25,28 @@ function run(args, input = undefined) {
 const absolute = '[{"n":"x","v":1,"t":1793000000}]';
 const gateway = '[{"bn":"dev:","bv":20},{"n":"temp","v":2.5,"t":-2},{"n":"door","vb":false}]';
 
+test('CLI exchanges XML with JSON and CBOR and preserves textual output', () => {
+  const xml = run(['resolve', '--to', 'xml'], absolute);
+  assert.equal(xml.status, 0, xml.err);
+  assert.match(xml.out.toString(), /<sensml xmlns="urn:ietf:params:xml:ns:senml">/);
+  const checked = run(['check', '--from', 'xml'], xml.out);
+  assert.equal(checked.status, 0, checked.err);
+  assert.equal(JSON.parse(checked.out).measurements, 1);
+  const cbor = run(['resolve', '--from', 'xml', '--to', 'cbor'], xml.out);
+  assert.equal(cbor.status, 0, cbor.err);
+  assert.equal(run(['resolve', '--from', 'cbor', '--to', 'xml'], cbor.out).out.toString(), xml.out.toString());
+});
+
+test('CLI XML failure leaves no output and never echoes application XML text', () => {
+  const destination = join(directory, 'rejected-xml-output.xml');
+  const bad = '<sensml xmlns="urn:ietf:params:xml:ns:senml"><senml n="private-device" vs="private-value" secret_="yes"/></sensml>';
+  const result = run(['resolve', '--from', 'xml', '--to', 'xml', '--output', destination], bad);
+  assert.equal(result.status, 1);
+  assert.equal(JSON.parse(result.err).code, 'UnsupportedExtension');
+  assert.doesNotMatch(result.err, /private-device|private-value|secret_/);
+  assert.equal(existsSync(destination), false);
+});
+
 test('stdin resolution, exact-name filtering and complete validation', () => {
   const result = run(['resolve', '--now', '1793000000', '--name', 'dev:temp'], gateway);
   assert.equal(result.status, 0);
@@ -128,7 +150,7 @@ test('extension loss is reported and can be rejected before output creation', ()
 });
 
 test('bad options are usage errors and help is available without reading input', () => {
-  for (const args of [[], ['bad'], ['check', '--from', 'xml'], ['resolve', '--now'], ['resolve', '--now', 'NaN'], ['resolve', '--name', ''], ['check', '--to', 'cbor'], ['resolve', '--from', 'json', '--from', 'cbor']]) {
+  for (const args of [[], ['bad'], ['check', '--from', 'exi'], ['resolve', '--now'], ['resolve', '--now', 'NaN'], ['resolve', '--name', ''], ['check', '--to', 'cbor'], ['resolve', '--from', 'json', '--from', 'cbor']]) {
     const result = run(args);
     assert.equal(result.status, 2);
     assert.equal(JSON.parse(result.err).code, 'Usage');

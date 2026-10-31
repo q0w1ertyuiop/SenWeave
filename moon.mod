@@ -1,10 +1,10 @@
 name = "q0w1ertyuiop/senweave"
 
-version = "0.1.0-dev.14"
+version = "0.1.0-dev.15"
 
 license = "Apache-2.0"
 
-description = "Bounded SenML JSON/CBOR parsing, base resolution and standalone measurements for MoonBit"
+description = "Bounded SenML JSON/CBOR/XML parsing, base resolution and standalone measurements for MoonBit"
 
 readme = "README.md"
 
@@ -17,4 +17,5 @@ repository = "https://github.com/q0w1ertyuiop/SenWeave"
 import {
   "2515050242/cbor@0.1.2",
   "sujy123456/mooncoap@0.1.1",
+  "Milky2018/xml@0.6.1",
 }

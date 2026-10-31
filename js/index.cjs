@@ -46,7 +46,7 @@ function optionsFor(options, resolve) {
   options = ownData(options, allowed, 'InvalidArguments');
   const from = options.from === undefined ? 'json' : options.from;
   const to = options.to === undefined ? 'json' : options.to;
-  if (!['json', 'cbor'].includes(from) || !['json', 'cbor'].includes(to)) fail('InvalidArguments', 'Formats must be json or cbor.');
+  if (!['json', 'cbor', 'xml'].includes(from) || !['json', 'cbor', 'xml'].includes(to)) fail('InvalidArguments', 'Formats must be json, cbor or xml.');
   if (options.rejectExtensions !== undefined && typeof options.rejectExtensions !== 'boolean') fail('InvalidArguments', 'rejectExtensions must be boolean.');
   let reference = '';
   if (options.referenceTime !== undefined) {
@@ -62,12 +62,12 @@ function optionsFor(options, resolve) {
 
 function inputText(input, from, maxInput) {
   if (typeof input === 'string') {
-    if (from !== 'json') fail('InvalidArguments', 'CBOR input must be Uint8Array bytes.');
+    if (from === 'cbor') fail('InvalidArguments', 'CBOR input must be Uint8Array bytes.');
     if (input.length > maxInput || Buffer.byteLength(input, 'utf8') > maxInput) fail('InputLimit', 'Input exceeds the configured byte limit.');
-    if (!input.isWellFormed()) fail('InvalidJson', 'Input is not valid Unicode JSON text.');
+    if (!input.isWellFormed()) fail(from === 'xml' ? 'InvalidXml' : 'InvalidJson', 'Input is not valid Unicode text.');
     return input;
   }
-  if (!(input instanceof Uint8Array)) fail('InvalidArguments', 'Input must be JSON text or Uint8Array bytes.');
+  if (!(input instanceof Uint8Array)) fail('InvalidArguments', 'Input must be JSON/XML text or Uint8Array bytes.');
   if (input.byteLength > maxInput) fail('InputLimit', 'Input exceeds the configured byte limit.');
   if (from === 'cbor') return Buffer.from(input.buffer, input.byteOffset, input.byteLength).toString('hex');
   try { return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(input); }
@@ -98,9 +98,9 @@ function check(input, options = {}) {
 
 function resolve(input, options = {}) {
   const { result, settings } = invoke(input, options, true);
-  const length = settings.to === 'json' ? Buffer.byteLength(result.data, 'utf8') : result.data.length / 2;
+  const length = settings.to === 'cbor' ? result.data.length / 2 : Buffer.byteLength(result.data, 'utf8');
   if (length > settings.policy.maxOutputBytes) fail('OutputLimit', 'Output exceeds the configured byte limit.');
-  return { format: settings.to, data: settings.to === 'json' ? result.data : Uint8Array.from(Buffer.from(result.data, 'hex')),
+  return { format: settings.to, data: settings.to === 'cbor' ? Uint8Array.from(Buffer.from(result.data, 'hex')) : result.data,
     ignoredExtensions: result.ignored_extensions };
 }
 

@@ -23,5 +23,6 @@ for (const [source, target] of [
   [join(toolchain, 'lib/core/LICENSE'), 'core-LICENSE.txt'],
   [join(toolchain, 'lib/core/NOTICE'), 'core-NOTICE.txt'],
   [join(root, '.mooncakes/2515050242/cbor/LICENSE'), 'cbor-LICENSE.txt'],
+  [join(root, '.mooncakes/Milky2018/xml/LICENSE'), 'xml-LICENSE.txt'],
 ]) writeFileSync(join(notices, target), readFileSync(source));
 console.log(`Built SDK ${manifest.version}`);

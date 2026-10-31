@@ -10,7 +10,7 @@ function failure(code, message) { return Object.assign(new Error(message), { cod
 export async function sendMeasurement({ port, payload, source, key, format = 110, mid = randomInt(65536), timeout = 10000, signal }) {
   const identifier = value => typeof value === 'string' && /^[A-Za-z0-9._-]{1,64}$/.test(value);
   if (!Number.isInteger(port) || port < 1 || port > 65535 || !Buffer.isBuffer(payload) || payload.length > 8192 ||
-      ![110, 112].includes(format) || !Number.isInteger(mid) || mid < 0 || mid > 65535 ||
+      ![110, 112, 310].includes(format) || !Number.isInteger(mid) || mid < 0 || mid > 65535 ||
       !Number.isInteger(timeout) || timeout < 1 || timeout > 10000 ||
       (signal !== undefined && !(signal instanceof AbortSignal)) ||
       ((source !== undefined || key !== undefined) && (!identifier(source) || !identifier(key)))) throw failure('InvalidRequest', 'Invalid request');

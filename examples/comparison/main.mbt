@@ -11,7 +11,9 @@ pub fn compare_payload(input : String, format : String, now : Double) -> String 
     b""
   }
   let raw = try {
-    if format == "json" {
+    if format == "xml" {
+      @senweave.parse_xml(input)
+    } else if format == "json" {
       @senweave.parse_json(input)
     } else {
       @senweave.parse_cbor(bytes)
@@ -34,8 +36,22 @@ pub fn compare_payload(input : String, format : String, now : Double) -> String 
     }
   }
   try {
+    report["raw_xml"] = Json::string(raw.to_xml_string())
+  } catch {
+    error =>
+      report["raw_xml_error"] = Json::string("\{Repr(error.diagnostic().code)}")
+  }
+  try {
     let resolved = raw.resolve(reference_time=now)
     report["resolved_json"] = Json::string(resolved.to_json_string())
+    try {
+      report["resolved_xml"] = Json::string(resolved.to_xml_string())
+    } catch {
+      error =>
+        report["resolved_xml_error"] = Json::string(
+          "\{Repr(error.diagnostic().code)}",
+        )
+    }
     report["resolved_cbor"] = Json::string(
       @hex.encode(resolved.to_cbor_bytes()),
     )

@@ -18,7 +18,7 @@ let measurements = raw.resolve(reference_time=received_at)
 
 根包默认遵循 SenML 普通扩展忽略规则；设置 `reject_extensions=true` 时，存在被丢弃的普通扩展会返回 `IgnoredExtensions`。`Pack::ignored_extension_count()` 可供宽松消费方记录损失数量。未知强制扩展始终拒绝。
 
-`Format::from_content_type()` 接收最多 256 个 UTF-16 单元，媒体类型按 ASCII 大小写无关识别，修剪空格与制表符。JSON 可带唯一的 `charset=utf-8` 参数（值可用双引号），CBOR 不接受参数；未知／重复参数返回 `None`。这是一项明确的入口约定，不是通用 HTTP 头解析器。
+`Format::from_content_type()` 接收最多 256 个 UTF-16 单元，媒体类型按 ASCII 大小写无关识别，修剪空格与制表符。JSON／XML 可带唯一的 `charset=utf-8` 参数（值可用双引号），CBOR 不接受参数；未知／重复参数返回 `None`。这是一项明确的入口约定，不是通用 HTTP 头解析器。
 
 | Format | Content-Type | CoAP Content-Format |
 | --- | --- | --- |
@@ -121,6 +121,8 @@ python scripts/check_coap_interop.py
 python scripts/check_coap_interop.py --storage
 ```
 
-Node 测试通过真实 UDP 检查 JSON／CBOR、独立 ACK 字节、重复报文只验收一次、路由与格式错误、无效 UTF-8、扩展丢弃政策、SQLite 提交／拒绝和有限运行时间。Python 3.10 及以上的独立 aiocoap 客户端在默认模式执行 7 次、存储模式执行 11 次请求；后者包括同键重试、负载冲突和缺失来源拒绝，最终独立读回 3 包。CoAP 纯逻辑在 native、JS、wasm-gc 测试；套接字示例目前只有 Node.js 实现，尚未接入 MoonCoAP 的 native UDP 驱动或 MQTT 客户端。
+Node 测试通过真实 UDP 检查 JSON／CBOR／XML、独立 ACK 字节、重复报文只验收一次、路由与格式错误、无效 UTF-8、扩展丢弃政策、SQLite 提交／拒绝和有限运行时间。Python 3.10 及以上的独立 aiocoap 客户端在默认模式执行 7 次、存储模式执行 11 次请求；后者包括同键重试、负载冲突和缺失来源拒绝，最终独立读回 3 包。CoAP 纯逻辑在 native、JS、wasm-gc 测试；套接字示例目前只有 Node.js 实现，尚未接入 MoonCoAP 的 native UDP 驱动或 MQTT 客户端。
 
 设备侧发送适配器、默认重传间隔、取消和丢包验证见 [CoAP 发送说明](coap-sender.md)。
+
+XML 使用 `SenmlXml` 和 Content-Format `310`；纯状态机、Node.js Sender 与 SQLite 例子均已验证原始 XML 字节的接收和业务重试。XML 词法、DTD 策略及预算见 [XML 约定](xml-profile.md)。

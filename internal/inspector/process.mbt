@@ -42,9 +42,13 @@ pub fn process_input_with_policy(
       "InvalidLimits", "Policy requires bounded positive integer quotas and a boolean extension setting.",
     )
   }
-  if (input_format != "json" && input_format != "cbor") ||
+  if (input_format != "json" && input_format != "cbor" && input_format != "xml") ||
     (action != "check" && action != "resolve") ||
-    (output_format != "json" && output_format != "cbor") {
+    (
+      output_format != "json" &&
+      output_format != "cbor" &&
+      output_format != "xml"
+    ) {
     return error_result(
       "InvalidArguments", "Unknown input format, command or output format.",
     )
@@ -73,13 +77,15 @@ pub fn process_input_with_policy(
     }
   } else {
     if input.length() > policy.max_input_bytes {
-      return error_result("InputLimit", "JSON text exceeds the input limit.")
+      return error_result("InputLimit", "Text input exceeds the input limit.")
     }
     @utf8.encode(input)
   }
   let result = try {
     let format = if input_format == "json" {
       @senweave.SenmlJson
+    } else if input_format == "xml" {
+      @senweave.SenmlXml
     } else {
       @senweave.SenmlCbor
     }
@@ -110,15 +116,17 @@ pub fn process_input_with_policy(
       }).stringify()
     } else if output_format == "json" {
       selected.to_json_string()
+    } else if output_format == "xml" {
+      selected.to_xml_string(max_output_code_units=policy.max_output_bytes)
     } else {
       @hex.encode(
         selected.to_cbor_bytes(max_output_bytes=policy.max_output_bytes),
       )
     }
     if action == "resolve" &&
-      output_format == "json" &&
+      output_format != "cbor" &&
       @utf8.encode(data).length() > policy.max_output_bytes {
-      return error_result("OutputLimit", "JSON output exceeds the byte limit.")
+      return error_result("OutputLimit", "Text output exceeds the byte limit.")
     }
     Json::object({
       "ok": Json::boolean(true),

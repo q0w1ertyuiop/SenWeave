@@ -1,7 +1,7 @@
 {
   "name": "@q0w1ertyuiop/senweave",
-  "version": "0.1.0-dev.14",
-  "description": "Bounded SenML JSON/CBOR validation and resolution powered by MoonBit",
+  "version": "0.1.0-dev.15",
+  "description": "Bounded SenML JSON/CBOR/XML validation and resolution powered by MoonBit",
   "type": "commonjs",
   "license": "Apache-2.0",
   "repository": {

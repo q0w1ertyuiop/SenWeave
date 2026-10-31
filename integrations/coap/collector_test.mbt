@@ -89,6 +89,30 @@ test "CBOR payload retains binary data without JSON-host conversion" {
 }
 
 ///|
+test "XML collector recognizes Content-Format 310 and rejects the stream ID" {
+  let collector = @coap.Collector::new()
+  let payload = b"<sensml xmlns='urn:ietf:params:xml:ns:senml'><senml n='x' v='1' t='-3'/></sensml>"
+  let events = collector.receive(
+    "peer",
+    request(payload, format=310),
+    0L,
+    1793000000.0,
+  )
+  assert_eq(
+    accepted(events).unwrap().record(0).unwrap().time.as_double(),
+    1792999997.0,
+  )
+  let stream = collector.receive(
+    "peer",
+    request(payload, mid=11, format=311),
+    1L,
+    1793000000.0,
+  )
+  assert_eq(accepted(stream) is None, true)
+  assert_eq(response(stream).unwrap().code.value, 143)
+}
+
+///|
 test "duplicate requests replay the cached ACK and never accept a second measurement" {
   let collector = @coap.Collector::new()
   let wire = request(b"[{\"n\":\"x\",\"v\":1}]")

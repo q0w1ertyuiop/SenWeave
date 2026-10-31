@@ -119,6 +119,25 @@ function temporaryLedger() {
   };
 }
 
+test('XML Content-Format 310 stores original bytes and business retries once', async t => {
+  const ledger = temporaryLedger();
+  let server;
+  try {
+    server = await start(t, '5000', ['--store', ledger.path]);
+    const payload = Buffer.from('<sensml xmlns="urn:ietf:params:xml:ns:senml"><senml n="counter" v="9007199254740993" t="-3"/></sensml>');
+    const options = { port: server.port, payload, format: 310, source: 'xml-device', key: 'first' };
+    assert.equal((await sendMeasurement(options)).code, 68);
+    assert.equal((await sendMeasurement(options)).code, 68);
+    const database = new DatabaseSync(ledger.path, { readOnly: true });
+    const rows = database.prepare('SELECT format,payload,senml_json FROM measurements').all();
+    database.close();
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].format, 310);
+    assert.deepEqual(Buffer.from(rows[0].payload), payload);
+    assert.ok(rows[0].senml_json.includes('9007199254740993'));
+  } finally { if (server) await stop(server.child); ledger.cleanup(); }
+});
+
 async function separateExchange(socket, port, wire) {
   const messages = [];
   function collect(message) { messages.push(message); }

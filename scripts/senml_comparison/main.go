@@ -27,13 +27,15 @@ func compare(q request) map[string]string {
 		if err != nil {
 			return map[string]string{"stage": "decode_validate", "error": "invalid hex"}
 		}
+	} else if q.Format == "xml" {
+		format = senml.XML
 	}
 	// Decode invokes Validate in the pinned upstream version.
 	p, err := senml.Decode(data, format)
 	if err != nil {
 		return map[string]string{"stage": "decode_validate", "error": err.Error()}
 	}
-	for _, f := range []senml.Format{senml.JSON, senml.CBOR} {
+	for _, f := range []senml.Format{senml.JSON, senml.CBOR, senml.XML} {
 		encoded, err := senml.Encode(p, f)
 		if err != nil {
 			r["stage"], r["error"] = "encode_raw", err.Error()
@@ -41,6 +43,8 @@ func compare(q request) map[string]string {
 		}
 		if f == senml.JSON {
 			r["raw_json"] = string(encoded)
+		} else if f == senml.XML {
+			r["raw_xml"] = string(encoded)
 		} else {
 			r["raw_cbor"] = hex.EncodeToString(encoded)
 		}
@@ -50,7 +54,7 @@ func compare(q request) map[string]string {
 		r["stage"], r["error"] = "normalize", err.Error()
 		return r
 	}
-	for _, f := range []senml.Format{senml.JSON, senml.CBOR} {
+	for _, f := range []senml.Format{senml.JSON, senml.CBOR, senml.XML} {
 		encoded, err := senml.Encode(p, f)
 		if err != nil {
 			r["stage"], r["error"] = "encode_normalized", err.Error()
@@ -58,6 +62,8 @@ func compare(q request) map[string]string {
 		}
 		if f == senml.JSON {
 			r["normalized_json"] = string(encoded)
+		} else if f == senml.XML {
+			r["normalized_xml"] = string(encoded)
 		} else {
 			r["normalized_cbor"] = hex.EncodeToString(encoded)
 		}

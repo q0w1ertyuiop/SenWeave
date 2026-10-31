@@ -1,0 +1,220 @@
+{
+  "binary-data/xml": {
+    "stages": [
+      "raw_cbor",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "DataValue is a Go string; CBOR encoding emits text instead of a definite byte string (RFC 8428 section 6)."
+  },
+  "base-value-inheritance/xml": {
+    "stages": [
+      "normalized_json",
+      "normalized_cbor",
+      "normalized_xml"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Normalize applies bv only from the current record and omits its inherited value in later records."
+  },
+  "base-value-reset/xml": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "raw_xml"
+    ],
+    "classification": "standard-semantics",
+    "reason": "omitempty drops explicit bv=0 from the raw encoding, changing later resolution."
+  },
+  "base-name-reset/xml": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "raw_xml",
+      "normalized_json",
+      "normalized_cbor",
+      "normalized_xml"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An empty bn is treated as absent, retaining the preceding base name."
+  },
+  "base-time-reset/xml": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "raw_xml",
+      "normalized_json",
+      "normalized_cbor",
+      "normalized_xml"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit bt=0 is treated as absent, retaining the preceding base time."
+  },
+  "base-unit-reset/xml": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "raw_xml",
+      "normalized_json",
+      "normalized_cbor",
+      "normalized_xml"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit empty unit/base unit is treated as absent, retaining the preceding base unit."
+  },
+  "unit-empty-override/xml": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "raw_xml",
+      "normalized_json",
+      "normalized_cbor",
+      "normalized_xml"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit empty unit/base unit is treated as absent, retaining the preceding base unit."
+  },
+  "base-sum-inheritance/xml": {
+    "stages": [
+      "normalized_json",
+      "normalized_cbor",
+      "normalized_xml"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Normalize only emits s when a regular s was present; the inherited bs alone is lost."
+  },
+  "base-sum-reset/xml": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "raw_xml",
+      "normalized_json",
+      "normalized_cbor",
+      "normalized_xml"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit bs=0 is treated as absent, retaining the preceding base sum."
+  },
+  "relative-time/xml": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "raw_xml",
+      "normalized_json",
+      "normalized_cbor",
+      "normalized_xml"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An explicit bt=0 is treated as absent, retaining the preceding base time."
+  },
+  "context-record/xml": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "standard-semantics",
+    "reason": "The base-only context record, as in RFC 8428 section 5.1.7, is rejected for lacking a value."
+  },
+  "mandatory-extension/xml": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Unknown underscore-suffixed labels are ignored instead of rejected (RFC 8428 section 4.4)."
+  },
+  "unknown-version/xml": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "version-policy",
+    "reason": "Go carries bver=99 without an unsupported-feature check; SenWeave currently supports version 10."
+  },
+  "integer-53/xml": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "raw_xml",
+      "normalized_json",
+      "normalized_cbor",
+      "normalized_xml"
+    ],
+    "classification": "numeric-representation",
+    "reason": "Go uses binary64 and loses exact integer representation. Binary64 equivalence is checked separately; exact integer preservation is an additional SenWeave capability."
+  },
+  "uint64-max/xml": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "raw_xml",
+      "normalized_json",
+      "normalized_cbor",
+      "normalized_xml"
+    ],
+    "classification": "numeric-representation",
+    "reason": "Go uses binary64 and loses exact integer representation. Binary64 equivalence is checked separately; exact integer preservation is an additional SenWeave capability."
+  },
+  "negative-cbor-min/xml": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json"
+    ],
+    "classification": "numeric-representation",
+    "reason": "Go JSON formatting changes the spelling of -2^64; its XML formatter preserves the integer in this sample. Binary64 equivalence is recorded separately."
+  },
+  "base-value-on-sum/xml": {
+    "stages": [
+      "normalized_json",
+      "normalized_cbor",
+      "normalized_xml"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Normalize does not apply bv when a sum-only measurement has no regular v (RFC 8428 section 4.5.4)."
+  },
+  "xml-all-labels/xml": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "raw_xml",
+      "normalized_json",
+      "normalized_cbor",
+      "normalized_xml"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Combined fixture exposes lost explicit base resets, inherited sums without regular s, CBOR DataValue text encoding and float64 representation. Individual causes have separate minimal fixtures."
+  },
+  "xml-integral-version-lexical/xml": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "standard-semantics",
+    "reason": "XML Schema int permits a leading plus and leading zeros; Go uint XML parsing rejects +010."
+  },
+  "xml-duplicate-attributes/xml": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Go XML decoding accepts duplicate attributes, which XML 1.0 forbids; SenWeave reports InvalidXml."
+  },
+  "xml-foreign-root-namespace/xml": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "standard-semantics",
+    "reason": "Go matches the root local name without enforcing the SenML namespace URI."
+  },
+  "xml-dtd-ingress/xml": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "ingress-policy",
+    "reason": "Go skips the DTD directive. SenWeave rejects DTD declarations as an explicit ingress policy."
+  },
+  "xml-empty-values/xml": {
+    "stages": [
+      "raw_cbor",
+      "normalized_cbor"
+    ],
+    "classification": "standard-semantics",
+    "reason": "An empty DataValue remains a string in Go CBOR output instead of a definite-length byte string."
+  }
+}

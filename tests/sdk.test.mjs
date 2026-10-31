@@ -10,6 +10,44 @@ const commonjs = require('../js/index.cjs');
 const source = '[{"bn":"sensor:","bt":1793000000},{"n":"counter","v":18446744073709551615},{"n":"door","vb":false}]';
 const rejected = code => error => error instanceof SenWeaveError && error.code === code && error.diagnostic.code === code;
 
+test('SDK exchanges XML JSON and CBOR without changing exact measurement values', () => {
+  const xml = resolve(source, { to: 'xml' });
+  assert.equal(xml.format, 'xml');
+  assert.equal(typeof xml.data, 'string');
+  assert.ok(xml.data.includes('18446744073709551615'));
+  assert.equal(check(xml.data, { from: 'xml' }).measurements, 2);
+  const padded = Buffer.concat([Buffer.from([255]), Buffer.from(xml.data), Buffer.from([255])]);
+  assert.equal(resolve(padded.subarray(1, padded.length - 1), { from: 'xml' }).data, resolve(source).data);
+  const cbor = resolve(xml.data, { from: 'xml', to: 'cbor' });
+  assert.equal(resolve(cbor.data, { from: 'cbor', to: 'xml' }).data, xml.data);
+  const text = '[{"n":"text","vs":"\\t\\r\\n<&>门🚪","t":1793000000}]';
+  assert.equal(resolve(resolve(text, { to: 'xml' }).data, { from: 'xml' }).data, resolve(text).data);
+});
+
+test('SDK XML ingress applies UTF-8 quotas extension policy and private diagnostics', () => {
+  const xml = '<sensml xmlns="urn:ietf:params:xml:ns:senml"><senml n="x" v="1" vendor="extra"/></sensml>';
+  assert.equal(resolve(xml, { from: 'xml', referenceTime: 1793000000 }).ignoredExtensions, 1);
+  assert.throws(() => resolve(xml, { from: 'xml', rejectExtensions: true }), rejected('IgnoredExtensions'));
+  assert.throws(() => check(xml, { from: 'xml', limits: { maxDepth: 1 } }), rejected('NestingLimit'));
+  assert.throws(() => check(xml, { from: 'xml', limits: { maxInputBytes: 8 } }), rejected('InputLimit'));
+  assert.throws(() => check(new Uint8Array([255]), { from: 'xml' }), rejected('InvalidUtf8'));
+  assert.throws(() => check(String.fromCharCode(0xd800), { from: 'xml' }), rejected('InvalidXml'));
+  const bad = '<sensml xmlns="urn:ietf:params:xml:ns:senml"><senml n="private-device" vs="private-value" secret_="yes"/></sensml>';
+  assert.throws(() => check(bad, { from: 'xml' }), error => {
+    assert.equal(error.code, 'UnsupportedExtension');
+    assert.equal(error.diagnostic.field, undefined);
+    assert.doesNotMatch(JSON.stringify(error.diagnostic), /private-device|private-value|secret_/);
+    return true;
+  });
+});
+
+test('SDK XML output refuses invalid XML characters and conservative output overruns', () => {
+  assert.throws(() => resolve('[{"n":"x","vs":"\\u0000","t":1793000000}]', { to: 'xml' }), rejected('InvalidXml'));
+  assert.throws(() => resolve(source, { to: 'xml', limits: { maxOutputBytes: 60 } }), rejected('OutputLimit'));
+  const xml = resolve(source, { to: 'xml', name: 'sensor:counter' }).data;
+  assert.equal(check(xml, { from: 'xml' }).measurements, 1);
+});
+
 test('SDK accepts CBOR variants and preserves wide negative integer text across formats', () => {
   for (const [hex, literal] of [
     ['81bf0061780201ff', '1'],

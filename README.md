@@ -4,7 +4,7 @@
 
 面向 MoonBit 的 SenML 解析、语义展开与互操作库。
 
-**当前阶段：SenML JSON／CBOR 库、Node.js SDK、离线工具与 CoAP 收发适配器，版本 `0.1.0-dev.14`。** 支持带资源上限的解析、基字段展开、独立记录输出及存储后应答。业务键可识别跨重启重试并拒绝负载冲突。npm 本地压缩包已通过独立运行与 TypeScript 消费验证，MoonBit 源码归档已通过三个后端的独立模块验证；注册表正式发布和 MQTT 集成尚未完成。
+**当前阶段：SenML JSON／CBOR／XML 库、Node.js SDK、离线工具与 CoAP 收发适配器，版本 `0.1.0-dev.15`。** 支持带资源上限的解析、基字段展开、独立记录输出及存储后应答。业务键可识别跨重启重试并拒绝负载冲突。npm 本地压缩包已通过独立运行与 TypeScript 消费验证，MoonBit 源码归档已通过三个后端的独立模块验证；注册表正式发布和 MQTT 集成尚未完成。
 
 SenML 数据包里的测量记录可以继承此前出现的设备名称、基准时间、单位和基准数值。记录从原数据包取出前，需要先应用这些信息，才能安全地独立保存或筛选。项目依据 [RFC 8428](https://www.rfc-editor.org/rfc/rfc8428.html)，为设备网关、采集服务和离线工具提供这层共享能力。
 
@@ -34,11 +34,11 @@ moon run examples/cbor --target js
 
 CI 针对 Windows、Linux 和 `native`、`js`、`wasm-gc` 三个后端运行相同测试与示例，另设两平台 CLI／UDP、分发、Python 互操作与 Go／Python 共同样本任务。
 
-固定版本的跨语言对照已运行 40 组、72 项 JSON／CBOR 用例，分别核对解码校验、原始编码、展开和数值表示。完整输入、实际输出与差异分类由脚本生成，CI 保存结果 artifact。测试范围与命令见 [参考实现比较](docs/comparison.md)、[离线工具](docs/cli.md)、[传输接入](docs/transport.md) 和 [互操作范围](docs/interoperability.md)。
+固定版本的跨语言对照已运行 47 组、110 项 JSON／CBOR／XML 用例，分别核对解码校验、原始编码、展开和数值表示。完整输入、实际输出与差异分类由脚本生成，CI 保存结果 artifact。测试范围与命令见 [参考实现比较](docs/comparison.md)、[离线工具](docs/cli.md)、[传输接入](docs/transport.md) 和 [互操作范围](docs/interoperability.md)。
 
 ## 在 Node.js 应用中调用
 
-从源码构建后可通过 ESM 或 CommonJS 调用，输入使用 JSON 原文或字节，测量数字不先转成 JavaScript `Number`：
+从源码构建后可通过 ESM 或 CommonJS 调用，输入使用 JSON／XML 原文或字节，测量数字不先转成 JavaScript `Number`：
 
 ```sh
 npm ci --ignore-scripts --no-audit --no-fund
@@ -57,7 +57,7 @@ const json = resolve(cbor.data, { from: 'cbor' });
 console.log(summary.measurements, json.data);
 ```
 
-`check` 验证完整展开，`resolve` 返回 JSON 文本或 CBOR 字节及扩展丢弃数量。`SenWeaveError` 提供固定诊断；相对时间需要显式 `referenceTime`。SDK 随本地 `.tgz` 携带编译后的 MoonBit 核心，消费项目只需 Node.js，无额外 npm 运行时依赖。接口、类型和边界见 [SDK 说明](docs/js-sdk.md)，两种归档的消费检查见 [分发验证](docs/distribution.md)。
+`check` 验证完整展开，`resolve` 返回 JSON／XML 文本或 CBOR 字节及扩展丢弃数量。`SenWeaveError` 提供固定诊断；相对时间需要显式 `referenceTime`。SDK 随本地 `.tgz` 携带编译后的 MoonBit 核心，消费项目只需 Node.js，无额外 npm 运行时依赖。接口、类型和边界见 [SDK 说明](docs/js-sdk.md)，两种归档的消费检查见 [分发验证](docs/distribution.md)。
 
 CommonJS 应用可用 `const { check, resolve } = require('@q0w1ertyuiop/senweave')` 加载已安装分发包；两种入口共享函数和错误类型。
 
@@ -80,9 +80,11 @@ node bin/senweave.mjs resolve examples/data/gateway.json --now 1793000000 --to c
 
 - `parse_json(input, limits?)`：返回 `Pack`，失败抛出带诊断的 `SenmlError`。
 - `parse_cbor(input, limits?, max_input_bytes?)`：把确定长度的 CBOR 数据包读入同一个 `Pack`，复用字段校验与展开逻辑。
-- `parse_payload(bytes, format, limits?, max_input_bytes?, reject_extensions?)`：共用的传输字节入口，JSON 严格检查 UTF-8，解码前检查字节上限，可拒绝普通未知扩展。
-- `Format`：提供 SenML JSON／CBOR 的媒体类型与 CoAP Content-Format 映射；不将 SenSML 流误认成有限包。
+- `parse_xml(input, limits?)`：按命名空间读取 SenML XML 的十五个基础属性，复用共享校验和展开；词法、实体和字符边界见 [XML 约定](docs/xml-profile.md)。
+- `parse_payload(bytes, format, limits?, max_input_bytes?, reject_extensions?)`：共用的传输字节入口，JSON／XML 严格检查 UTF-8，解码前检查字节上限，可拒绝普通未知扩展。
+- `Format`：提供 SenML JSON／CBOR／XML 的媒体类型与 CoAP Content-Format 映射；不将 SenSML 流误认成有限包。
 - `Pack::to_json_string(max_output_code_units?)`：输出原始 JSON 包，保留顺序、基字段、相对时间和数字文本；无需参考时刻，默认使用 4 Mi UTF-16 单元的保守预算。
+- `Pack::to_xml_string()`、`ResolvedPack::to_xml_string()`、`ResolvedRecord::to_xml_string()`：输出原始上下文包或独立测量，使用保守代码单元预算并拒绝 XML 1.0 无法表示的字符。
 - `Pack::len()`、`record(index)`、`measurement_count()`、`ignored_extension_count()`：读取原始记录、测量和丢弃扩展数量；越界索引返回 `None`。
 - `Pack::resolve(reference_time?, max_expanded_code_units?)`：应用名称、单位、时间、数值与和的基字段，返回按时间排序的 `ResolvedPack`；相对时间需要显式参考时刻。
 - `ResolvedPack::filter(predicate)`、`record(index)`、`len()`：筛选和读取独立测量；等时记录保留输入顺序，`source_index` 指向原始记录。
@@ -90,7 +92,7 @@ node bin/senweave.mjs resolve examples/data/gateway.json --now 1793000000 --to c
 - `Pack::to_cbor_bytes()`、`ResolvedPack::to_cbor_bytes()`、`ResolvedRecord::to_cbor_bytes()`：输出原始上下文包或独立测量；可设置 `max_output_bytes`。
 - `MeasurementValue`：区分数值、文本、布尔和二进制值；零、`false`、空文本和空二进制会保留。
 - `Number::json_literal()`：读取原始数字文本；`as_double()` 提供可能舍入的 binary64 近似值。
-- `SenmlError::diagnostic()`：读取错误类别、记录索引、字段及可用的 JSON 行列位置。
+- `SenmlError::diagnostic()`：读取错误类别、记录索引、字段及可用的 JSON／XML 行列位置。
 - `ParseLimits::default()`：提供输入大小、记录数、嵌套深度、字段数和字符串／数字长度上限。
 - `Label::from_json_name(name)`：识别区分大小写的标准 JSON 标签。
 - `Label::from_cbor_key(key)`：识别标准整数 CBOR 标签。
@@ -106,7 +108,7 @@ CBOR 使用标准整数标签和原生字节串，数字支持整数、浮点与
 
 ## 接收与发送 CoAP 测量
 
-`integrations/coap` 接收 `POST /ingest`，只支持 Content-Format `110`（SenML JSON）和 `112`（SenML CBOR）。协议层复用 MoonCoAP；适配器解析并展开测量，返回待发送报文和验收事件。相同对端的重复报文在交换生存期内重发缓存响应，不重复输出测量。
+`integrations/coap` 接收 `POST /ingest`，支持 Content-Format `110`（SenML JSON）、`112`（SenML CBOR）和 `310`（SenML XML）。协议层复用 MoonCoAP；适配器解析并展开测量，返回待发送报文和验收事件。相同对端的重复报文在交换生存期内重发缓存响应，不重复输出测量。
 
 ```sh
 moon build cmd/coapbridge --target js --release
@@ -137,21 +139,21 @@ node examples/coap/retry-demo.mjs
 
 ## 下一步实现
 
-1. 按标准条款补齐 JSON／CBOR 覆盖与 Go／Python 共同样本对照。
-2. 增加 XML，并前置验证 EXI 的 schema、依赖与后端路线。
+1. 持续扩充 JSON／CBOR／XML 条款覆盖与跨语言共同样本。
+2. 验证 EXI 的 schema、依赖与后端路线，并实现独立适配器。
 3. 实现版本特征、单位注册信息及内容格式扩展；SenSML 使用单独的增量接口规划。
 4. 正式发布 Mooncakes 包，在独立消费项目中验证注册表安装与使用。
 
-当前已运行的表示为有限 SenML JSON／CBOR。XML、EXI、SenSML、更新标准扩展和单位换算尚未实现，各项状态分别记录在标准覆盖表中。
+当前已运行的表示为有限 SenML JSON／CBOR／XML。EXI、SenSML、更新标准扩展和单位换算尚未实现，各项状态分别记录在标准覆盖表中。
 
 ## 架构与生态
 
 ![当前实现与计划架构](docs/architecture.svg)
 
-核心以 MoonBit 实现，接口接收内存数据。文件、时钟、网络和界面由消费项目提供。CBOR 入站由有界 SenML 读取器完成；浮点解码与标量编码固定复用 [2515050242/cbor@0.1.2](https://mooncakes.io/docs/2515050242/cbor@0.1.2)，CoAP 子包固定复用 [sujy123456/mooncoap@0.1.1](https://mooncakes.io/docs/sujy123456/mooncoap@0.1.1) 的内存协议核心；根包不导入网络驱动。模块依赖解析包含 MoonCoAP 的传递依赖，宿主示例的 UDP 使用 Node.js。现有 [MQTT 包](https://mooncakes.io/docs/Strangelight-Merser/moon-mqtt-client) 留待后续接入。
+核心以 MoonBit 实现，接口接收内存数据。文件、时钟、网络和界面由消费项目提供。CBOR 入站由有界 SenML 读取器完成；浮点解码与标量编码固定复用 [2515050242/cbor@0.1.2](https://mooncakes.io/docs/2515050242/cbor@0.1.2)，XML 固定复用 [Milky2018/xml@0.6.1](https://mooncakes.io/docs/Milky2018/xml@0.6.1) 的命名空间解析器与 Writer，CoAP 子包固定复用 [sujy123456/mooncoap@0.1.1](https://mooncakes.io/docs/sujy123456/mooncoap@0.1.1) 的内存协议核心；根包不导入网络驱动。模块依赖解析包含 MoonCoAP 的传递依赖，宿主示例的 UDP 使用 Node.js。现有 [MQTT 包](https://mooncakes.io/docs/Strangelight-Merser/moon-mqtt-client) 留待后续接入。
 
 检索记录与实现决策见 [开发记录](docs/development.md)。
 
 ## 许可
 
-[Apache-2.0](LICENSE)。标准行为以 RFC 8428 为准；[KPN Python SenML](https://github.com/kpn-iot/senml-python-library) 的测试版本、已通过流程和已知差异见 [互操作范围](docs/interoperability.md)。[absmach/senml](https://github.com/absmach/senml) 已阅读实现，尚未运行对照。当前实现未复制这些项目的源代码。
+[Apache-2.0](LICENSE)。标准行为以 RFC 8428 为准；[KPN Python SenML](https://github.com/kpn-iot/senml-python-library) 的测试版本、已通过流程和已知差异见 [互操作范围](docs/interoperability.md)。[absmach/senml](https://github.com/absmach/senml) 已固定提交并运行 JSON／CBOR／XML 对照。当前实现未复制这些项目的源代码。

@@ -53,7 +53,7 @@ export function openStore(path) {
     return {
       append(peer, receivedAt, json, identity = null) {
         if (identity !== null && (typeof identity.source !== 'string' || typeof identity.key !== 'string' ||
-            !/^[A-Za-z0-9._-]{1,64}$/.test(identity.source) || !/^[A-Za-z0-9._-]{1,64}$/.test(identity.key) || ![110, 112].includes(identity.format) ||
+            !/^[A-Za-z0-9._-]{1,64}$/.test(identity.source) || !/^[A-Za-z0-9._-]{1,64}$/.test(identity.key) || ![110, 112, 310].includes(identity.format) ||
             !Buffer.isBuffer(identity.payload) || identity.payload.length > 8192)) throw new Error('Invalid business identity');
         database.exec('BEGIN IMMEDIATE');
         try {

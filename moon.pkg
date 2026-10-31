@@ -4,4 +4,5 @@ import {
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/string",
   "2515050242/cbor",
+  "Milky2018/xml",
 }

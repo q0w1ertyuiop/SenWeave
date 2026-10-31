@@ -1,0 +1,136 @@
+[
+  {
+    "id": "xml-all-labels",
+    "spec": "8428-7",
+    "formats": [
+      "xml"
+    ],
+    "input": "[{\"bn\":\"device:\",\"bt\":1793000000,\"bu\":\"Cel\",\"bv\":20,\"bs\":100,\"bver\":10,\"n\":\"one\",\"v\":2.5,\"s\":1,\"t\":-3,\"ut\":30},{\"n\":\"label\",\"vs\":\"门\\t\\r\\n<&>🚪\",\"u\":\"\",\"t\":-2},{\"n\":\"flag\",\"vb\":false,\"u\":\"/\",\"t\":-1},{\"n\":\"blob\",\"vd\":\"AP8\",\"u\":\"/\",\"t\":0},{\"n\":\"counter\",\"bn\":\"\",\"bt\":0,\"bu\":\"\",\"bv\":0,\"bs\":0,\"v\":9007199254740993,\"t\":-4}]",
+    "expected": [
+      {
+        "n": "counter",
+        "t": 1792999996,
+        "u": "",
+        "v": 9007199254740993,
+        "s": 0
+      },
+      {
+        "n": "device:one",
+        "t": 1792999997,
+        "u": "Cel",
+        "v": 22.5,
+        "s": 101,
+        "ut": 30
+      },
+      {
+        "n": "device:label",
+        "t": 1792999998,
+        "u": "",
+        "vs": "门\t\r\n<&>🚪",
+        "s": 100
+      },
+      {
+        "n": "device:flag",
+        "t": 1792999999,
+        "u": "/",
+        "vb": false,
+        "s": 100
+      },
+      {
+        "n": "device:blob",
+        "t": 1793000000,
+        "u": "/",
+        "vd": "AP8",
+        "s": 100
+      }
+    ]
+  },
+  {
+    "id": "xml-integral-version-lexical",
+    "spec": "8428-7",
+    "formats": [
+      "xml"
+    ],
+    "input": "[]",
+    "xml_input": "<s:sensml xmlns:s='urn:ietf:params:xml:ns:senml'><s:senml n='one' v='+00012.50E+0' bver='+010' t='1793000000'/></s:sensml>",
+    "expected": [
+      {
+        "n": "one",
+        "v": 12.5,
+        "t": 1793000000
+      }
+    ]
+  },
+  {
+    "id": "xml-duplicate-attributes",
+    "spec": "XML-1.0-Unique-Att-Spec",
+    "formats": [
+      "xml"
+    ],
+    "input": "[]",
+    "xml_input": "<sensml xmlns='urn:ietf:params:xml:ns:senml'><senml n='x' v='1' v='2'/></sensml>",
+    "error": "InvalidXml"
+  },
+  {
+    "id": "xml-foreign-root-namespace",
+    "spec": "8428-7",
+    "formats": [
+      "xml"
+    ],
+    "input": "[]",
+    "xml_input": "<sensml xmlns='urn:other'><senml n='x' v='1'/></sensml>",
+    "error": "InvalidXml"
+  },
+  {
+    "id": "xml-dtd-ingress",
+    "spec": "senweave-XML-DTD-policy",
+    "formats": [
+      "xml"
+    ],
+    "input": "[]",
+    "xml_input": "<!DOCTYPE sensml [<!ENTITY unused 'x'>]><sensml xmlns='urn:ietf:params:xml:ns:senml'><senml n='x' v='1'/></sensml>",
+    "error": "UnsupportedXmlFeature"
+  },
+  {
+    "id": "xml-double-lexical",
+    "spec": "8428-7",
+    "formats": [
+      "xml"
+    ],
+    "input": "[]",
+    "xml_input": "<sensml xmlns='urn:ietf:params:xml:ns:senml'><senml n='x' v='.5E1' t='+01793000000'/></sensml>",
+    "expected": [
+      {
+        "n": "x",
+        "v": 5,
+        "t": 1793000000
+      }
+    ]
+  },
+  {
+    "id": "xml-empty-values",
+    "spec": "8428-7",
+    "formats": [
+      "xml"
+    ],
+    "input": "[]",
+    "xml_input": "<sensml xmlns='urn:ietf:params:xml:ns:senml'><senml n='label' vs='' t='1793000000'/><senml n='flag' vb='0' t='1793000000'/><senml n='blob' vd='' t='1793000000'/></sensml>",
+    "expected": [
+      {
+        "n": "label",
+        "vs": "",
+        "t": 1793000000
+      },
+      {
+        "n": "flag",
+        "vb": false,
+        "t": 1793000000
+      },
+      {
+        "n": "blob",
+        "vd": "",
+        "t": 1793000000
+      }
+    ]
+  }
+]

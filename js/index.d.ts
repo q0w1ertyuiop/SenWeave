@@ -1,4 +1,4 @@
-export type Format = 'json' | 'cbor';
+export type Format = 'json' | 'cbor' | 'xml';
 export type Input = string | Uint8Array;
 export interface Diagnostic {
   readonly code: string;
@@ -42,10 +42,11 @@ export interface ResolveOptions<F extends Format = Format> extends CheckOptions 
 }
 export interface ResolveResult<F extends Format> {
   format: F;
-  data: F extends 'json' ? string : Uint8Array;
+  data: F extends 'cbor' ? Uint8Array : string;
   ignoredExtensions: number;
 }
 export function check(input: Input, options?: CheckOptions): CheckResult;
 export function resolve(input: Input, options: ResolveOptions<'cbor'> & { to: 'cbor' }): ResolveResult<'cbor'>;
+export function resolve(input: Input, options: ResolveOptions<'xml'> & { to: 'xml' }): ResolveResult<'xml'>;
 export function resolve(input: Input, options?: ResolveOptions<'json'>): ResolveResult<'json'>;
-export function resolve(input: Input, options: ResolveOptions): ResolveResult<'json'> | ResolveResult<'cbor'>;
+export function resolve(input: Input, options: ResolveOptions): ResolveResult<'json'> | ResolveResult<'cbor'> | ResolveResult<'xml'>;

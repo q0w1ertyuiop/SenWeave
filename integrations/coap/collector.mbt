@@ -105,7 +105,8 @@ pub fn Collector::receive(
         } else {
           match @protocol.message_uint(message, 12, -1L) {
             Ok(content_format) if content_format == 110L ||
-              content_format == 112L => {
+              content_format == 112L ||
+              content_format == 310L => {
               let format = @senweave.Format::from_coap_content_format(
                 content_format.to_int(),
               ).unwrap()

@@ -9,6 +9,8 @@ pub(all) enum ErrorCode {
   StringLimit
   NumberLimit
   InvalidJson
+  InvalidXml
+  UnsupportedXmlFeature
   DuplicateKey
   InvalidRoot
   InvalidRecord

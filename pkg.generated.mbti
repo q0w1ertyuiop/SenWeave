@@ -12,6 +12,8 @@ pub fn parse_json(String, limits? : ParseLimits) -> Pack raise SenmlError
 
 pub fn parse_payload(Bytes, Format, limits? : ParseLimits, max_input_bytes? : Int32, reject_extensions? : Bool) -> Pack raise SenmlError
 
+pub fn parse_xml(String, limits? : ParseLimits) -> Pack raise SenmlError
+
 // Errors
 pub(all) suberror SenmlError {
   Invalid(Diagnostic)
@@ -39,6 +41,8 @@ pub(all) enum ErrorCode {
   StringLimit
   NumberLimit
   InvalidJson
+  InvalidXml
+  UnsupportedXmlFeature
   DuplicateKey
   InvalidRoot
   InvalidRecord
@@ -69,6 +73,7 @@ pub fn ErrorCode::to_repr(Self) -> @debug.Repr
 pub(all) enum Format {
   SenmlJson
   SenmlCbor
+  SenmlXml
 } derive(Eq, @debug.Debug)
 pub fn Format::coap_content_format(Self) -> Int32
 pub fn Format::content_type(Self) -> String
@@ -128,6 +133,7 @@ pub fn Pack::record(Self, Int32) -> Record?
 pub fn Pack::resolve(Self, reference_time? : Double, max_expanded_code_units? : Int32) -> ResolvedPack raise SenmlError
 pub fn Pack::to_cbor_bytes(Self, max_output_bytes? : Int32) -> Bytes raise SenmlError
 pub fn Pack::to_json_string(Self, max_output_code_units? : Int32) -> String raise SenmlError
+pub fn Pack::to_xml_string(Self, max_output_code_units? : Int32) -> String raise SenmlError
 
 pub(all) struct ParseLimits {
   max_input_code_units : Int32
@@ -166,6 +172,7 @@ pub fn ResolvedPack::len(Self) -> Int32
 pub fn ResolvedPack::record(Self, Int32) -> ResolvedRecord?
 pub fn ResolvedPack::to_cbor_bytes(Self, max_output_bytes? : Int32) -> Bytes raise SenmlError
 pub fn ResolvedPack::to_json_string(Self) -> String
+pub fn ResolvedPack::to_xml_string(Self, max_output_code_units? : Int32) -> String raise SenmlError
 
 pub struct ResolvedRecord {
   name : String
@@ -180,6 +187,7 @@ pub struct ResolvedRecord {
 pub fn ResolvedRecord::to_cbor_bytes(Self, max_output_bytes? : Int32) -> Bytes raise SenmlError
 pub fn ResolvedRecord::to_json_string(Self) -> String
 pub fn ResolvedRecord::to_repr(Self) -> @debug.Repr
+pub fn ResolvedRecord::to_xml_string(Self, max_output_code_units? : Int32) -> String raise SenmlError
 
 // Type aliases
 

@@ -10,6 +10,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 
 import cbor2
 from kpn_senml import SenmlPack, SenmlRecord
@@ -35,6 +36,15 @@ def run(args, data=None, cwd=ROOT):
 
 
 def payload(case, fmt):
+    if fmt == "xml":
+        if "xml_input" in case:
+            return case["xml_input"]
+        root = ET.Element("sensml", {"xmlns": "urn:ietf:params:xml:ns:senml"})
+        for record in json.loads(case["input"]):
+            attributes = {key: ("true" if value else "false") if isinstance(value, bool)
+                          else str(value) for key, value in record.items()}
+            ET.SubElement(root, "senml", attributes)
+        return ET.tostring(root, encoding="unicode")
     if fmt == "json":
         return case["input"]
     if "cbor_hex" in case:
@@ -63,6 +73,25 @@ def records_from_cbor(hex_text):
                 value = base64.urlsafe_b64encode(value).decode().rstrip("=")
             fields[label] = value
         result.append(fields)
+    return result
+
+
+def records_from_xml(text):
+    root = ET.fromstring(text)
+    ns = "{urn:ietf:params:xml:ns:senml}"
+    assert root.tag == ns + "sensml"
+    result = []
+    for child in root:
+        assert child.tag == ns + "senml"
+        record = {}
+        for label, value in child.attrib.items():
+            if label in {"bt", "bv", "bs", "bver", "v", "s", "t", "ut"}:
+                value = json.loads(value)
+            elif label == "vb":
+                assert value in {"true", "false", "1", "0"}
+                value = value in {"true", "1"}
+            record[label] = value
+        result.append(record)
     return result
 
 
@@ -129,15 +158,21 @@ def python_update(case, request):
         return {"error": type(error).__name__}
 
 
-def compare(output):
+def compare(output, include_xml):
     assert importlib.metadata.version("cbor2") == "5.7.1"
     assert importlib.metadata.version("kpn-senml") == "1.0.1"
     suite = json.loads((HERE / "cases.json").read_text(encoding="utf-8"))
     assert suite["schema"] == 1
     cases = suite["cases"]
+    if include_xml:
+        cases += json.loads((HERE / "xml_cases.json").read_text(encoding="utf-8"))
     assert len({case["id"] for case in cases}) == len(cases)
     now = suite["reference_time"]
     expanded = [(case, fmt) for case in cases for fmt in case.get("formats", ["json", "cbor"])]
+    if include_xml:
+        # XML has no JSON null value; invalid numeric lexical forms are covered
+        # by XML-specific tests rather than pretending that "None" is null.
+        expanded += [(case, "xml") for case in cases if "formats" not in case and case["id"] != "null-value"]
     requests = [{"payload": payload(case, fmt), "format": fmt, "now": now}
                 for case, fmt in expanded]
     run(["moon", "build", "examples/comparison", "--target", "js", "--release", "--deny-warn"])
@@ -157,12 +192,14 @@ def compare(output):
         if "expected" not in expanded[i][0]:
             continue
         for library, result in [("senweave", actual), ("go", reference)]:
-            for field, fmt in [("raw_json", "json"), ("raw_cbor", "cbor")]:
+            for field, fmt in [("raw_json", "json"), ("raw_cbor", "cbor")] + ([("raw_xml", "xml")] if expanded[i][1] == "xml" else []):
                 if field in result:
                     roundtrip_keys.append((i, library, field))
                     roundtrip_requests.append({"payload": result[field], "format": fmt, "now": now})
     roundtrips = dict(zip(roundtrip_keys, moon_batch(roundtrip_requests)))
     expectations = json.loads((HERE / "go_expectations.json").read_text(encoding="utf-8"))
+    if include_xml:
+        expectations.update(json.loads((HERE / "xml_expectations.json").read_text(encoding="utf-8")))
     reports, unexpected, differences = [], [], Counter()
     python_count = 0
     for i, ((case, fmt), request, actual, go) in enumerate(zip(expanded, requests, moon_results, go_results)):
@@ -184,21 +221,32 @@ def compare(output):
                                    ("resolved_cbor", records_from_cbor(actual["resolved_cbor"]))]:
                 assert equal(project(decoded, now), expected), (key, field, decoded, expected)
             assert cbor_data_types_valid(actual["resolved_cbor"]), key
-            for field in ["raw_json", "raw_cbor"]:
+            if "resolved_xml" in actual:
+                assert equal(project(records_from_xml(actual["resolved_xml"]), now), expected), (key, "resolved_xml")
+            else:
+                assert fmt != "xml" and actual.get("resolved_xml_error") == "InvalidXml", key
+            if "xml_input" not in case and "raw_xml" in actual:
+                original = [{k: v for k, v in r.items() if k in LABELS} for r in json.loads(case["input"])]
+                assert equal(records_from_xml(actual["raw_xml"]), original), (key, "raw_xml")
+            raw_fields = ["raw_json", "raw_cbor"] + (["raw_xml"] if fmt == "xml" else [])
+            for field in raw_fields:
                 copy = roundtrips[(i, "senweave", field)]
                 assert copy["stage"] == "resolved" and equal(project(json.loads(copy["resolved_json"]), now), expected), (key, field, copy)
             if go["stage"] == "decode_validate":
                 observed.append("validation")
             else:
                 assert go["stage"] == "normalized", (key, go)
-                for field in ["raw_json", "raw_cbor"]:
+                for field in raw_fields:
                     copy = roundtrips[(i, "go", field)]
                     if copy["stage"] != "resolved" or not equal(project(json.loads(copy["resolved_json"]), now), expected):
                         observed.append(field)
                         if copy["stage"] == "resolved" and equal(project(json.loads(copy["resolved_json"]), now), expected, binary64=True):
                             binary64_equivalent.append(field)
-                for field, decoded in [("normalized_json", json.loads(go["normalized_json"])),
-                                       ("normalized_cbor", records_from_cbor(go["normalized_cbor"]))]:
+                normalized = [("normalized_json", json.loads(go["normalized_json"])),
+                              ("normalized_cbor", records_from_cbor(go["normalized_cbor"]))]
+                if fmt == "xml":
+                    normalized.append(("normalized_xml", records_from_xml(go["normalized_xml"])))
+                for field, decoded in normalized:
                     if (not equal(project(decoded, now, complete_time=True), expected)
                             or (field == "normalized_cbor" and not cbor_data_types_valid(go[field]))):
                         observed.append(field)
@@ -216,11 +264,11 @@ def compare(output):
                   "go_classification": known.get("classification", "same"),
                   "go_interpretation": known.get("reason", "Same result in the exercised stages.")}
         record["roundtrips"] = {library: {field: roundtrips[(i, library, field)]
-            for field in ["raw_json", "raw_cbor"] if (i, library, field) in roundtrips}
+            for field in ["raw_json", "raw_cbor", "raw_xml"] if (i, library, field) in roundtrips}
             for library in ["senweave", "go"]}
         if "normalized_json" in go:
             record["go_normalized_with_reference"] = project(json.loads(go["normalized_json"]), now, complete_time=True)
-        if "python" in case:
+        if "python" in case and fmt != "xml":
             python_count += 1
             python = python_update(case, request)
             if "error" in case["python"]:
@@ -235,6 +283,7 @@ def compare(output):
     used = {case["id"] + "/" + fmt for case, fmt in expanded}
     assert not (expectations.keys() - used), "Remove stale difference expectations"
     summary = {"fixtures": len(cases), "format_cases": len(requests),
+               "formats": dict(sorted(Counter(fmt for _, fmt in expanded).items())),
                "senweave_passed": len(requests), "go_same": sum(not r["go_difference_stages"] for r in reports),
                "go_documented_differences": sum(bool(r["go_difference_stages"]) for r in reports),
                "go_classifications": dict(sorted(Counter(r["go_classification"] for r in reports).items())),
@@ -246,7 +295,7 @@ def compare(output):
     report = {"schema": 1, "versions": {"senweave": json.loads((ROOT / "package.json").read_text())["version"],
               "go_toolchain": run(["go", "version"]).strip(), "go_module": GO_MODULE,
               "go_reference": GO_VERSION, "kpn_senml": "1.0.1", "cbor2": "5.7.1"},
-              "reference_time": now, "command": "python scripts/senml_comparison/run.py",
+              "reference_time": now, "command": "python scripts/senml_comparison/run.py" + (" --xml" if include_xml else ""),
               "summary": summary, "cases": reports}
     report["versions"].update({"python": platform.python_version(),
         "node": run(["node", "--version"]).strip(), "moon": run(["moon", "version"]).strip()})
@@ -259,7 +308,8 @@ def compare(output):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / "_build/interop/senml-comparison.json")
+    parser.add_argument("--xml", action="store_true", help="Include shared XML cases and XML-specific fixtures")
     args = parser.parse_args()
     if not shutil.which("go"):
         parser.error("Go 1.24.5 or newer is required for the pinned reference")
-    compare(args.output)
+    compare(args.output, args.xml)

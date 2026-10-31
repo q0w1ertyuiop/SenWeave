@@ -95,6 +95,17 @@ test "archive consumer completes a public deferred CoAP delivery" {
 }
 
 ///|
+test "archive consumer exchanges XML using only the public library" {
+  let raw = @senweave.parse_xml("<sensml xmlns='urn:ietf:params:xml:ns:senml'><senml bn='sensor:' bt='1793000000' n='counter' v='9007199254740993'/></sensml>")
+  let xml = raw.to_xml_string()
+  assert_eq(xml.contains("9007199254740993"), true)
+  let copy = @senweave.parse_xml(xml)
+  assert_eq(copy.resolve().to_json_string(), raw.resolve().to_json_string())
+  assert_eq(@senweave.parse_xml(copy.resolve().to_xml_string()).resolve().to_json_string(), raw.resolve().to_json_string())
+  assert_eq(@senweave.SenmlXml.coap_content_format(), 310)
+}
+
+///|
 test "archive consumer diagnostics retain standard labels but omit extension names" {
   for (input, expected) in [
     ("[{\\"n\\":\\"x\\",\\"v\\":\\"secret-value\\"}]", Some("v")),
@@ -127,7 +138,7 @@ test "archive consumer uses a public SenML sender without socket dependencies" {
             output = run(["moon", "test", "--target", target], consumer)
             assert "failed: 0" in output, output
         print(json.dumps({"module": name, "version": version, "archive_files": len(names),
-            "targets": targets, "consumer_cases": 4, "status": "passed", "sha256": hashlib.sha256(archive.read_bytes()).hexdigest()}))
+            "targets": targets, "consumer_cases": 5, "status": "passed", "sha256": hashlib.sha256(archive.read_bytes()).hexdigest()}))
 
 
 if __name__ == "__main__":

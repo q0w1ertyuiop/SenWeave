@@ -77,6 +77,10 @@ test "sender preserves JSON CBOR and application identity on POST ingest" {
     (payload, format) in [
       (b"[{\"n\":\"x\",\"v\":9007199254740993,\"t\":-3}]", @senweave.SenmlJson),
       (b"\x81\xa2\x00\x61x\x02\x01", @senweave.SenmlCbor),
+      (
+        b"<sensml xmlns='urn:ietf:params:xml:ns:senml'><senml n='x' v='1'/></sensml>",
+        @senweave.SenmlXml,
+      ),
     ] {
     let sender = @coap.Sender::new("p", 123L, initial_mid=65535).unwrap()
     let wire = transmitted(

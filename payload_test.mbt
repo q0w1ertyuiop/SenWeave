@@ -1,6 +1,6 @@
 ///|
 test "content types and CoAP format IDs recognize only finite SenML packs" {
-  for format in [@senweave.SenmlJson, @senweave.SenmlCbor] {
+  for format in [@senweave.SenmlJson, @senweave.SenmlCbor, @senweave.SenmlXml] {
     assert_eq(
       @senweave.Format::from_content_type(format.content_type()),
       Some(format),
@@ -27,7 +27,7 @@ test "content types and CoAP format IDs recognize only finite SenML packs" {
     ] {
     assert_eq(@senweave.Format::from_content_type(input), None)
   }
-  for id in [-1, 50, 60, 111, 113, 65535] {
+  for id in [-1, 50, 60, 111, 113, 114, 115, 311, 65535] {
     assert_eq(@senweave.Format::from_coap_content_format(id), None)
   }
 }
