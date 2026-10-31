@@ -1,27 +1,39 @@
 ///|
-// Decimal source spellings do not exist on the CBOR wire. Preserve ordinary
-// 64-bit integer literals exactly; other numbers use their binary64 projection.
-fn Number::to_cbor(self : Number) -> @cbor.CborValue {
+// Output is limited to shallow SenML record maps. Keep major-type-one
+// arguments unsigned so the complete negative integer range remains exact.
+priv enum CborOutput {
+  Scalar(@cbor.CborValue)
+  NegativeInteger(UInt64)
+  RecordMap(Array[(Int32, CborOutput)])
+}
+
+///|
+fn Number::to_cbor(self : Number) -> CborOutput {
   if self.literal != "-0" &&
     !self.literal.contains(".") &&
     !self.literal.contains("e") {
+    if self.literal == "-18446744073709551616" {
+      return NegativeInteger(18446744073709551615UL)
+    }
     if self.literal.has_prefix("-") {
-      let integer = Some(@string.parse_int64(self.literal, base=10)) catch {
+      let magnitude = Some(
+        @string.parse_uint64(self.literal[1:].to_owned(), base=10),
+      ) catch {
         _ => None
       }
-      if integer is Some(n) {
-        return @cbor.Integer(n)
+      if magnitude is Some(n) && n > 0UL {
+        return NegativeInteger(n - 1UL)
       }
     } else {
       let integer = Some(@string.parse_uint64(self.literal, base=10)) catch {
         _ => None
       }
       if integer is Some(n) {
-        return @cbor.Unsigned(n)
+        return Scalar(@cbor.Unsigned(n))
       }
     }
   }
-  @cbor.Float64(self.approximate)
+  Scalar(@cbor.Float64(self.approximate))
 }
 
 ///|
@@ -32,36 +44,36 @@ fn cbor_measurement_fields(
   sum : Number?,
   time : Number?,
   update_time : Number?,
-) -> Array[(@cbor.CborValue, @cbor.CborValue)] {
+) -> Array[(Int32, CborOutput)] {
   let fields = []
   if name is Some(text) {
-    fields.push((@cbor.Integer(0L), @cbor.Text(text)))
+    fields.push((0, Scalar(@cbor.Text(text))))
   }
   if unit is Some(text) {
-    fields.push((@cbor.Integer(1L), @cbor.Text(text)))
+    fields.push((1, Scalar(@cbor.Text(text))))
   }
   match value {
-    Some(Numeric(number)) => fields.push((@cbor.Integer(2L), number.to_cbor()))
-    Some(Text(text)) => fields.push((@cbor.Integer(3L), @cbor.Text(text)))
+    Some(Numeric(number)) => fields.push((2, number.to_cbor()))
+    Some(Text(text)) => fields.push((3, Scalar(@cbor.Text(text))))
     Some(Boolean(flag)) =>
-      fields.push((@cbor.Integer(4L), @cbor.Simple(if flag { 21 } else { 20 })))
-    Some(Data(bytes)) => fields.push((@cbor.Integer(8L), @cbor.Bytes(bytes)))
+      fields.push((4, Scalar(@cbor.Simple(if flag { 21 } else { 20 }))))
+    Some(Data(bytes)) => fields.push((8, Scalar(@cbor.Bytes(bytes))))
     None => ()
   }
   if sum is Some(number) {
-    fields.push((@cbor.Integer(5L), number.to_cbor()))
+    fields.push((5, number.to_cbor()))
   }
   if time is Some(number) {
-    fields.push((@cbor.Integer(6L), number.to_cbor()))
+    fields.push((6, number.to_cbor()))
   }
   if update_time is Some(number) {
-    fields.push((@cbor.Integer(7L), number.to_cbor()))
+    fields.push((7, number.to_cbor()))
   }
   fields
 }
 
 ///|
-fn Record::to_cbor(self : Record) -> @cbor.CborValue {
+fn Record::to_cbor(self : Record) -> CborOutput {
   let fields = cbor_measurement_fields(
     self.name,
     self.unit,
@@ -71,30 +83,29 @@ fn Record::to_cbor(self : Record) -> @cbor.CborValue {
     self.update_time,
   )
   if self.base_name is Some(text) {
-    fields.push((@cbor.Integer(-2L), @cbor.Text(text)))
+    fields.push((-2, Scalar(@cbor.Text(text))))
   }
   if self.base_unit is Some(text) {
-    fields.push((@cbor.Integer(-4L), @cbor.Text(text)))
+    fields.push((-4, Scalar(@cbor.Text(text))))
   }
   if self.base_time is Some(number) {
-    fields.push((@cbor.Integer(-3L), number.to_cbor()))
+    fields.push((-3, number.to_cbor()))
   }
   if self.base_value is Some(number) {
-    fields.push((@cbor.Integer(-5L), number.to_cbor()))
+    fields.push((-5, number.to_cbor()))
   }
   if self.base_sum is Some(number) {
-    fields.push((@cbor.Integer(-6L), number.to_cbor()))
+    fields.push((-6, number.to_cbor()))
   }
-  // The parser has validated version 10. RFC 8428 requires unsigned encoding.
   if self.base_version is Some(_) {
-    fields.push((@cbor.Integer(-1L), @cbor.Unsigned(10UL)))
+    fields.push((-1, Scalar(@cbor.Unsigned(10UL))))
   }
-  @cbor.Map(fields)
+  RecordMap(fields)
 }
 
 ///|
-fn ResolvedRecord::to_cbor(self : ResolvedRecord) -> @cbor.CborValue {
-  @cbor.Map(
+fn ResolvedRecord::to_cbor(self : ResolvedRecord) -> CborOutput {
+  RecordMap(
     cbor_measurement_fields(
       Some(self.name),
       self.unit,
@@ -107,45 +118,80 @@ fn ResolvedRecord::to_cbor(self : ResolvedRecord) -> @cbor.CborValue {
 }
 
 ///|
-// Bound UTF-8 encoding and header costs before invoking the shared encoder.
-// These locally constructed trees contain only shallow arrays/maps/scalars.
-fn cbor_size_bound(value : @cbor.CborValue) -> Int64 {
-  match value {
-    @cbor.Text(text) => 9L + 3L * text.length().to_int64()
-    @cbor.Bytes(bytes) => 9L + bytes.length().to_int64()
-    @cbor.Array(items) => {
-      let mut cost = 9L
-      for item in items {
-        cost += cbor_size_bound(item)
+fn CborOutput::size_bound(self : CborOutput) -> Int64 {
+  match self {
+    Scalar(@cbor.Text(text)) => 9L + 3L * text.length().to_int64()
+    Scalar(@cbor.Bytes(bytes)) => 9L + bytes.length().to_int64()
+    RecordMap(fields) => {
+      let mut size = 9L
+      for (_, value) in fields {
+        size += 9L + value.size_bound()
       }
-      cost
-    }
-    @cbor.Map(entries) => {
-      let mut cost = 9L
-      for (key, value) in entries {
-        cost += cbor_size_bound(key) + cbor_size_bound(value)
-      }
-      cost
+      size
     }
     _ => 9L
   }
 }
 
 ///|
+fn write_cbor_head(buffer : Buffer, major : Int32, argument : UInt64) -> Unit {
+  let prefix = major << 5
+  if argument < 24UL {
+    buffer.write_byte((prefix | argument.to_int()).to_byte())
+    return
+  }
+  let (info, width) = if argument <= 255UL {
+    (24, 1)
+  } else if argument <= 65535UL {
+    (25, 2)
+  } else if argument <= 4294967295UL {
+    (26, 4)
+  } else {
+    (27, 8)
+  }
+  buffer.write_byte((prefix | info).to_byte())
+  for index in 0..<width {
+    buffer.write_byte((argument >> ((width - index - 1) * 8)).to_byte())
+  }
+}
+
+///|
+fn cbor_label_order(label : Int32) -> Int32 {
+  if label < 0 {
+    31 - label
+  } else {
+    label
+  }
+}
+
+///|
+fn CborOutput::write(self : CborOutput, buffer : Buffer) -> Unit {
+  match self {
+    Scalar(value) => @cbor.encode_to_buffer(value, buffer)
+    NegativeInteger(argument) => write_cbor_head(buffer, 1, argument)
+    RecordMap(fields) => {
+      // Every standard key fits one byte; preserve the codec's existing order.
+      fields.sort_by((a, b) => cbor_label_order(a.0) - cbor_label_order(b.0))
+      write_cbor_head(buffer, 5, fields.length().to_uint64())
+      for (key, value) in fields {
+        @cbor.encode_to_buffer(@cbor.Integer(key.to_int64()), buffer)
+        value.write(buffer)
+      }
+    }
+  }
+}
+
+///|
 fn encode_cbor_records(
-  records : Array[@cbor.CborValue],
+  records : Array[CborOutput],
   max_output_bytes : Int32,
 ) -> Bytes raise SenmlError {
   if max_output_bytes <= 0 {
     reject(InvalidLimits, None, None, "CBOR output limit must be positive.")
   }
-  let mut size = 1L
-  // The empty array needs one byte; allow an exact one-byte empty output.
-  if !records.is_empty() {
-    size = 9L
-  }
+  let mut size = if records.is_empty() { 1L } else { 9L }
   for record in records {
-    size += cbor_size_bound(record)
+    size += record.size_bound()
     if size > max_output_bytes.to_int64() {
       reject(
         OutputLimit,
@@ -155,13 +201,18 @@ fn encode_cbor_records(
       )
     }
   }
-  @cbor.encode(@cbor.Array(records))
+  let buffer = Buffer()
+  write_cbor_head(buffer, 4, records.length().to_uint64())
+  for record in records {
+    record.write(buffer)
+  }
+  buffer.to_bytes()
 }
 
 ///|
 /// Encode raw records in their original order, retaining base context.
-/// Unknown extensions were discarded at parse time. Non-integer-literal
-/// numbers use binary64; exact decimal source spellings are not retained.
+/// Plain integer literals in the complete CBOR range remain exact. Other
+/// numeric spellings use binary64; optional extensions are not retained.
 pub fn Pack::to_cbor_bytes(
   self : Pack,
   max_output_bytes~ : Int32 = 4_194_304,

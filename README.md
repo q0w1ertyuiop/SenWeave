@@ -2,13 +2,13 @@
 
 # SenWeave · 感织
 
-面向 MoonBit 物联网应用的 SenML 测量数据语义与 JSON／CBOR 交换库。
+面向 MoonBit 的 SenML 解析、语义展开与互操作库。
 
-**当前阶段：SenML JSON／CBOR 库、Node.js SDK、离线工具与 CoAP 收发适配器，版本 `0.1.0-dev.12`。** 支持带资源上限的解析、基字段展开、独立记录输出及存储后应答。业务键可识别跨重启重试并拒绝负载冲突。npm 本地压缩包已通过独立运行与 TypeScript 消费验证，MoonBit 源码归档已通过三个后端的独立模块验证；注册表正式发布和 MQTT 集成尚未完成。
+**当前阶段：SenML JSON／CBOR 库、Node.js SDK、离线工具与 CoAP 收发适配器，版本 `0.1.0-dev.13`。** 支持带资源上限的解析、基字段展开、独立记录输出及存储后应答。业务键可识别跨重启重试并拒绝负载冲突。npm 本地压缩包已通过独立运行与 TypeScript 消费验证，MoonBit 源码归档已通过三个后端的独立模块验证；注册表正式发布和 MQTT 集成尚未完成。
 
 SenML 数据包里的测量记录可以继承此前出现的设备名称、基准时间、单位和基准数值。记录从原数据包取出前，需要先应用这些信息，才能安全地独立保存或筛选。项目依据 [RFC 8428](https://www.rfc-editor.org/rfc/rfc8428.html)，为设备网关、采集服务和离线工具提供这层共享能力。
 
-项目目标、生态分工、已验证成果与后续计划见 [项目申报书](docs/proposal.md)。
+项目目标与交付计划见 [项目申报书](docs/proposal.md)，当前状态见 [标准覆盖表](docs/senml-support.md) 和 [参考实现比较](docs/comparison.md)。
 
 ## 从源码运行
 
@@ -80,6 +80,7 @@ node bin/senweave.mjs resolve examples/data/gateway.json --now 1793000000 --to c
 - `parse_cbor(input, limits?, max_input_bytes?)`：把确定长度的 CBOR 数据包读入同一个 `Pack`，复用字段校验与展开逻辑。
 - `parse_payload(bytes, format, limits?, max_input_bytes?, reject_extensions?)`：共用的传输字节入口，JSON 严格检查 UTF-8，解码前检查字节上限，可拒绝普通未知扩展。
 - `Format`：提供 SenML JSON／CBOR 的媒体类型与 CoAP Content-Format 映射；不将 SenSML 流误认成有限包。
+- `Pack::to_json_string(max_output_code_units?)`：输出原始 JSON 包，保留顺序、基字段、相对时间和数字文本；无需参考时刻，默认使用 4 Mi UTF-16 单元的保守预算。
 - `Pack::len()`、`record(index)`、`measurement_count()`、`ignored_extension_count()`：读取原始记录、测量和丢弃扩展数量；越界索引返回 `None`。
 - `Pack::resolve(reference_time?, max_expanded_code_units?)`：应用名称、单位、时间、数值与和的基字段，返回按时间排序的 `ResolvedPack`；相对时间需要显式参考时刻。
 - `ResolvedPack::filter(predicate)`、`record(index)`、`len()`：筛选和读取独立测量；等时记录保留输入顺序，`source_index` 指向原始记录。
@@ -99,7 +100,7 @@ node bin/senweave.mjs resolve examples/data/gateway.json --now 1793000000 --to c
 
 展开算术采用 binary64，可能舍入；没有加法或加零时保留数值原文。溢出、缺失相对时钟和不可表示的绝对时间会失败，展开体积默认采用 4 Mi UTF-16 单元的保守上限。使用示例、时间与数值边界见 [展开和输出约定](docs/resolution.md)。
 
-CBOR 使用标准整数标签和原生字节串，数字支持整数、浮点与输入 Tag 4。编码保留可表示的普通 64 位整数字面量，其余数字采用 binary64；JSON 的十进制原文在跨格式输出后会改变。输入类型、确定长度及数值边界见 [CBOR 约定](docs/cbor-profile.md)。
+CBOR 使用标准整数标签和原生字节串，数字支持整数、浮点与输入 Tag 4。普通整数字面量在基本 CBOR 范围 `-2^64` 至 `2^64−1` 内可准确编码，其余数字采用 binary64；JSON 的十进制原文在跨格式输出后会改变。不定长记录映射与非首选参数宽度可读，`vs`／`vd` 仍使用确定长度。输入类型及数值边界见 [CBOR 约定](docs/cbor-profile.md)。
 
 ## 接收与发送 CoAP 测量
 
@@ -134,16 +135,18 @@ node examples/coap/retry-demo.mjs
 
 ## 下一步实现
 
-1. 验证 MQTT 消费接入与更多外部 SenML 实现，扩充真实设备输入。
-2. 正式发布 Mooncakes 包，在独立消费项目中验证注册表安装与使用。
+1. 按标准条款补齐 JSON／CBOR 覆盖与 Go／Python 共同样本对照。
+2. 增加 XML，并前置验证 EXI 的 schema、依赖与后端路线。
+3. 实现版本特征、单位注册信息及内容格式扩展；SenSML 使用单独的增量接口规划。
+4. 正式发布 Mooncakes 包，在独立消费项目中验证注册表安装与使用。
 
-首版范围为 RFC 8428 的 SenML JSON／CBOR 数据包。XML、EXI、SenSML 无限流和单位换算不在首版范围内。
+当前已运行的表示为有限 SenML JSON／CBOR。XML、EXI、SenSML、更新标准扩展和单位换算尚未实现，各项状态分别记录在标准覆盖表中。
 
 ## 架构与生态
 
 ![当前实现与计划架构](docs/architecture.svg)
 
-核心以 MoonBit 实现，接口接收内存数据。文件、时钟、网络和界面由消费项目提供。CBOR 编解码固定复用 [2515050242/cbor@0.1.2](https://mooncakes.io/docs/2515050242/cbor@0.1.2)，CoAP 子包固定复用 [sujy123456/mooncoap@0.1.1](https://mooncakes.io/docs/sujy123456/mooncoap@0.1.1) 的内存协议核心；根包不导入网络驱动。模块依赖解析包含 MoonCoAP 的传递依赖，宿主示例的 UDP 使用 Node.js。现有 [MQTT 包](https://mooncakes.io/docs/Strangelight-Merser/moon-mqtt-client) 留待后续接入。
+核心以 MoonBit 实现，接口接收内存数据。文件、时钟、网络和界面由消费项目提供。CBOR 入站由有界 SenML 读取器完成；浮点解码与标量编码固定复用 [2515050242/cbor@0.1.2](https://mooncakes.io/docs/2515050242/cbor@0.1.2)，CoAP 子包固定复用 [sujy123456/mooncoap@0.1.1](https://mooncakes.io/docs/sujy123456/mooncoap@0.1.1) 的内存协议核心；根包不导入网络驱动。模块依赖解析包含 MoonCoAP 的传递依赖，宿主示例的 UDP 使用 Node.js。现有 [MQTT 包](https://mooncakes.io/docs/Strangelight-Merser/moon-mqtt-client) 留待后续接入。
 
 检索记录与实现决策见 [开发记录](docs/development.md)。
 

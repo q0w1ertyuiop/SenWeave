@@ -127,6 +127,7 @@ pub fn Pack::measurement_count(Self) -> Int32
 pub fn Pack::record(Self, Int32) -> Record?
 pub fn Pack::resolve(Self, reference_time? : Double, max_expanded_code_units? : Int32) -> ResolvedPack raise SenmlError
 pub fn Pack::to_cbor_bytes(Self, max_output_bytes? : Int32) -> Bytes raise SenmlError
+pub fn Pack::to_json_string(Self, max_output_code_units? : Int32) -> String raise SenmlError
 
 pub(all) struct ParseLimits {
   max_input_code_units : Int32

@@ -10,6 +10,24 @@ const commonjs = require('../js/index.cjs');
 const source = '[{"bn":"sensor:","bt":1793000000},{"n":"counter","v":18446744073709551615},{"n":"door","vb":false}]';
 const rejected = code => error => error instanceof SenWeaveError && error.code === code && error.diagnostic.code === code;
 
+test('SDK accepts CBOR variants and preserves wide negative integer text across formats', () => {
+  for (const [hex, literal] of [
+    ['81bf0061780201ff', '1'],
+    ['9801b802180078017818021801', '1'],
+    ['81a2006178023b8000000000000000', '-9223372036854775809'],
+    ['81a2006178023bfffffffffffffffe', '-18446744073709551615'],
+    ['81a2006178023bffffffffffffffff', '-18446744073709551616'],
+  ]) {
+    const input = Uint8Array.from(Buffer.from(hex, 'hex'));
+    const options = { from: 'cbor', referenceTime: 1793000000 };
+    assert.equal(check(input, options).measurements, 1);
+    const json = resolve(input, options).data;
+    assert.ok(json.includes(`"v":${literal}`));
+    const cbor = resolve(input, { ...options, to: 'cbor' }).data;
+    assert.equal(resolve(cbor, { from: 'cbor' }).data, json);
+  }
+});
+
 test('ESM and CommonJS share functions and error identity in one process', () => {
   assert.equal(commonjs.check, check);
   assert.equal(commonjs.resolve, resolve);

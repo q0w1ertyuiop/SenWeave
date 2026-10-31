@@ -26,6 +26,7 @@ fn main raise {
   }
   let resolved = raw.resolve(reference_time=1793000000.0)
   let report = Json::object({
+    "raw_json": Json::string(raw.to_json_string()),
     "raw_cbor_hex": Json::string(@hex.encode(raw.to_cbor_bytes())),
     "resolved_cbor_hex": Json::string(@hex.encode(resolved.to_cbor_bytes())),
     "resolved": @json.parse(

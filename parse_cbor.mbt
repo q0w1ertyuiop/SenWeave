@@ -1,8 +1,7 @@
 ///|
-/// Parse a bounded definite-length SenML CBOR pack into raw records.
-/// limits controls records, fields, text/binary size, number text and item depth;
-/// max_input_bytes replaces the JSON-only max_input_code_units input limit.
-/// Known labels must use their RFC integer keys; extension labels use text.
+/// Parse a bounded finite SenML CBOR pack into raw records. Record maps may
+/// have indefinite length; nonpreferred argument widths are accepted. Known
+/// labels use RFC integer keys, and extension labels use text.
 pub fn parse_cbor(
   input : Bytes,
   limits~ : ParseLimits = ParseLimits::default(),
@@ -15,96 +14,53 @@ pub fn parse_cbor(
   if input.length() > max_input_bytes {
     reject(InputLimit, None, None, "CBOR input exceeds the byte limit.")
   }
-  scan_cbor(input, limits)
-  let root = @cbor.decode(input) catch {
-    _ => {
-      reject(InvalidCbor, None, None, "Invalid CBOR encoding or Unicode text.")
-      @cbor.Array([])
-    }
-  }
-  guard root is @cbor.Array(items) else {
+  let reader = { input, offset: 0, limits, }
+  let root = reader.head(1)
+  if root.major != 4 {
     reject(InvalidRoot, None, None, "SenML CBOR must be an array.")
-    return { records: [], }
   }
+  if root.info == 31 {
+    reject(
+      UnsupportedCborType,
+      None,
+      None,
+      "Finite SenML packs require a definite-length array.",
+    )
+  }
+  if root.argument > limits.max_records.to_uint64() {
+    reject(RecordLimit, None, None, "Pack exceeds the configured record limit.")
+  }
+  let count = reader.count(root, 1)
   let records = []
-  for index, item in items {
-    guard item is @cbor.Map(entries) else {
-      reject(
-        InvalidRecord,
-        Some(index),
-        None,
-        "Each SenML CBOR record must be a map.",
-      )
-      continue
-    }
-    let fields : Map[String, Json] = Map([])
-    let mut data : Bytes? = None
-    for (key, value) in entries {
-      let label = cbor_label(key, index)
-      if fields.contains(label) {
-        reject(
-          DuplicateKey,
-          Some(index),
-          Some(label),
-          "Duplicate SenML CBOR label.",
-        )
-      }
-      let known = Label::from_json_name(label)
-      fields[label] = match known {
-        None => Json::null()
-        Some(DataValue) => {
-          guard value is @cbor.Bytes(bytes) else {
-            reject(
-              WrongType,
-              Some(index),
-              Some(label),
-              "Expected a definite-length CBOR byte string.",
-            )
-            continue
-          }
-          if bytes.length() > limits.max_string_code_units {
-            reject(
-              StringLimit,
-              Some(index),
-              Some(label),
-              "Binary data exceeds the configured byte limit.",
-            )
-          }
-          data = Some(bytes)
-          Json::null()
-        }
-        Some(BaseVersion) =>
-          match value {
-            @cbor.Integer(n) if n >= 0L =>
-              Json::number(n.to_double(), repr=n.to_string())
-            @cbor.Unsigned(n) => Json::number(n.to_double(), repr=n.to_string())
-            _ => {
-              reject(
-                WrongType,
-                Some(index),
-                Some(label),
-                "CBOR base version must be an unsigned integer.",
-              )
-              Json::null()
-            }
-          }
-        Some(_) => cbor_field_json(value, index, label)
-      }
-    }
-    records.push(parse_record(fields, index, limits, data?))
+  for index in 0..<count {
+    records.push(reader.record(index))
+  }
+  if reader.offset != input.length() {
+    reject(InvalidCbor, None, None, "Trailing bytes after SenML CBOR pack.")
   }
   validated_pack(records)
 }
 
 ///|
-fn cbor_label(key : @cbor.CborValue, index : Int32) -> String raise SenmlError {
-  let label = match key {
-    @cbor.Integer(n) if n >= -6L && n <= 8L => Label::from_cbor_key(n.to_int())
-    @cbor.Unsigned(n) if n <= 8UL => Label::from_cbor_key(n.to_int())
-    @cbor.Text(text) if Label::from_json_name(text) is None => return text
-    _ => None
+fn CborReader::label(
+  self : CborReader,
+  head : CborHead,
+  index : Int32,
+) -> String raise SenmlError {
+  let known = if head.major == 0 && head.argument <= 8UL {
+    Label::from_cbor_key(head.argument.to_int())
+  } else if head.major == 1 && head.argument <= 5UL {
+    Label::from_cbor_key(-1 - head.argument.to_int())
+  } else if head.major == 3 {
+    let text = self.text(head, 3, index~)
+    if Label::from_json_name(text) is None {
+      return text
+    }
+    None
+  } else {
+    None
   }
-  match label {
+  match known {
     Some(label) => label.json_name()
     None => {
       reject(
@@ -119,62 +75,134 @@ fn cbor_label(key : @cbor.CborValue, index : Int32) -> String raise SenmlError {
 }
 
 ///|
-fn cbor_integer_text(value : @cbor.CborValue) -> String? {
-  match value {
-    @cbor.Integer(n) => Some(n.to_string())
-    @cbor.Unsigned(n) => Some(n.to_string())
-    _ => None
-  }
-}
-
-///|
-fn cbor_field_json(
-  value : @cbor.CborValue,
+fn CborReader::field(
+  self : CborReader,
+  head : CborHead,
   index : Int32,
   label : String,
 ) -> Json raise SenmlError {
-  match value {
-    @cbor.Integer(n) => Json::number(n.to_double(), repr=n.to_string())
-    @cbor.Unsigned(n) => Json::number(n.to_double(), repr=n.to_string())
-    @cbor.Float64(n) => {
-      if n.is_nan() || n.is_inf() {
-        reject(
-          InvalidNumber,
-          Some(index),
-          Some(label),
-          "SenML numeric fields must be finite.",
-        )
-      }
-      Json::number(n)
+  if head.major == 0 ||
+    head.major == 1 ||
+    (head.major == 7 && head.info >= 25 && head.info <= 27) ||
+    (head.major == 6 && head.argument == 4UL) {
+    return self.number(head, 3, index, label)
+  }
+  if head.major == 3 {
+    return Json::string(
+      self.text(head, 3, definite=label == "vs", index~, label~),
+    )
+  }
+  if head.major == 7 && (head.info == 20 || head.info == 21) {
+    return Json::boolean(head.info == 21)
+  }
+  self.skip(head, 3)
+  Json::null()
+}
+
+///|
+fn CborReader::record(
+  self : CborReader,
+  index : Int32,
+) -> Record raise SenmlError {
+  let map = self.head(2)
+  if map.major != 5 {
+    reject(
+      InvalidRecord,
+      Some(index),
+      None,
+      "Each SenML CBOR record must be a map.",
+    )
+  }
+  if map.info != 31 &&
+    map.argument > self.limits.max_fields_per_record.to_uint64() {
+    reject(
+      FieldLimit,
+      Some(index),
+      None,
+      "Record exceeds the configured member limit.",
+    )
+  }
+  let count = if map.info == 31 { -1 } else { self.count(map, 2) }
+  let fields : Map[String, Json] = Map([])
+  let mut data : Bytes? = None
+  let mut members = 0
+  while members != count {
+    if count == -1 && self.take_break() {
+      break
     }
-    @cbor.Text(text) => Json::string(text)
-    @cbor.Simple(20) => Json::boolean(false)
-    @cbor.Simple(21) => Json::boolean(true)
-    @cbor.Tag(4UL, @cbor.Array([exponent, mantissa])) => {
-      guard cbor_integer_text(exponent) is Some(exponent) &&
-        cbor_integer_text(mantissa) is Some(mantissa) else {
-        reject(
-          WrongType,
-          Some(index),
-          Some(label),
-          "Decimal fraction requires an integer exponent and mantissa.",
-        )
-        return Json::null()
+    if members >= self.limits.max_fields_per_record {
+      reject(
+        FieldLimit,
+        Some(index),
+        None,
+        "Record exceeds the configured member limit.",
+      )
+    }
+    let label = self.label(self.head(3), index)
+    if fields.contains(label) {
+      reject(
+        DuplicateKey,
+        Some(index),
+        Some(label),
+        "Duplicate SenML CBOR label.",
+      )
+    }
+    let value = self.head(3)
+    fields[label] = match Label::from_json_name(label) {
+      None => {
+        self.skip(value, 3)
+        Json::null()
       }
-      // Reuse the standard decimal-to-binary64 parser, retaining the decimal
-      // fraction's exact exponent/mantissa text for the shared number validator.
-      @json.parse("\{mantissa}e\{exponent}", preserve_number_repr=true) catch {
-        _ => {
+      Some(DataValue) => {
+        if value.major != 2 {
           reject(
-            InvalidNumber,
+            WrongType,
             Some(index),
             Some(label),
-            "Invalid CBOR decimal fraction.",
+            "Expected a CBOR byte string.",
           )
-          Json::null()
         }
+        if value.info == 31 {
+          reject(
+            UnsupportedCborType,
+            Some(index),
+            Some(label),
+            "SenML data values must have definite length.",
+          )
+        }
+        if value.argument > (self.input.length() - self.offset).to_uint64() {
+          reject(
+            InvalidCbor,
+            None,
+            None,
+            "CBOR length exceeds remaining input.",
+          )
+        }
+        if value.argument > self.limits.max_string_code_units.to_uint64() {
+          reject(
+            StringLimit,
+            Some(index),
+            Some(label),
+            "Binary data exceeds the configured byte limit.",
+          )
+        }
+        data = Some(self.take(value.argument).to_owned())
+        Json::null()
       }
+      Some(BaseVersion) => {
+        if value.major != 0 {
+          reject(
+            WrongType,
+            Some(index),
+            Some(label),
+            "CBOR base version must be an unsigned integer.",
+          )
+        }
+        self.number(value, 3, index, label)
+      }
+      Some(_) => self.field(value, index, label)
     }
-    _ => Json::null()
+    members += 1
   }
+  parse_record(fields, index, self.limits, data?)
 }

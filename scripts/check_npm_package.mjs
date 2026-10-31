@@ -44,6 +44,12 @@ try {
 assert.equal(check(input).measurements,1);
 const cbor=resolve(input,{to:'cbor'});
 assert.ok(cbor.data instanceof Uint8Array);
+assert.equal(check(Uint8Array.from(Buffer.from('81bf0061780201ff','hex')),{from:'cbor',referenceTime:1793000000}).measurements,1);
+const negativeInput=Uint8Array.from(Buffer.from('81a2006178023bffffffffffffffff','hex'));
+const negativeJson=resolve(negativeInput,{from:'cbor',referenceTime:1793000000}).data;
+assert.ok(negativeJson.includes('-18446744073709551616'));
+const negativeWire=resolve(negativeInput,{from:'cbor',to:'cbor',referenceTime:1793000000}).data;
+assert.equal(resolve(negativeWire,{from:'cbor'}).data,negativeJson);
 assert.ok(resolve(cbor.data,{from:'cbor'}).data.includes('9007199254740993'));
 assert.throws(()=>check('[{"n":"x","v":1}]'),e=>e instanceof SenWeaveError && e.code==='MissingReferenceTime');
 assert.throws(()=>check(input,{limits:{maxRecords:1}}),e=>e.code==='RecordLimit');

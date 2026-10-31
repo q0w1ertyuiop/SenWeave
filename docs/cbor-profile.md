@@ -1,63 +1,55 @@
-# CBOR 约定 · 0.1.0-dev.6
+# CBOR 约定 · 0.1.0-dev.13
 
-`parse_cbor(bytes, limits?, max_input_bytes?)` 把 `application/senml+cbor` 数据包读入与 JSON 相同的 `Pack`。基字段继承、名称检查、版本 10、测量类型和错误处理复用现有实现。依据 [RFC 8428 §6](https://www.rfc-editor.org/rfc/rfc8428.html#section-6)，基础标签采用整数键，二进制值使用 CBOR 字节串。
+`parse_cbor(bytes, limits?, max_input_bytes?)` 将 SenML CBOR 读入与 JSON 相同的 `Pack`，共用字段校验、版本与展开逻辑。标准依据为 [RFC 8428 §6](https://www.rfc-editor.org/rfc/rfc8428.html#section-6)。入站由 SenML 专用有界读取器处理；浮点解码与标量输出复用 [2515050242/cbor@0.1.2](https://mooncakes.io/docs/2515050242/cbor@0.1.2)。
 
-## 调用与输出
+## 原始包与独立测量
 
 ```moonbit
-let raw = @senweave.parse_json(
-  "[{\"bn\":\"sensor:\",\"bt\":1793000000},{\"n\":\"temp\",\"v\":22.5}]",
-)
-let wire = raw.to_cbor_bytes()
-let received = @senweave.parse_cbor(wire)
-let readings = received.resolve()
-let independent_wire = readings.to_cbor_bytes()
-let independent_json = readings.to_json_string()
+let raw = @senweave.parse_cbor(payload)
+let context_json = raw.to_json_string()
+let context_cbor = raw.to_cbor_bytes()
+let readings = raw.resolve(reference_time=1793000000.0)
+let standalone = readings.to_cbor_bytes()
 ```
 
-`Pack::to_cbor_bytes()` 保留原始记录顺序与基字段；`ResolvedPack::to_cbor_bytes()` 输出按时间排列的完整测量；单条 `ResolvedRecord::to_cbor_bytes()` 输出一个元素的数组。独立取出测量前仍需 `resolve`。
+原始输出保留记录顺序、基字段和相对时间，不需要参考时刻。独立取出、按完整名称筛选或归档前仍需 `resolve`。单条 `ResolvedRecord` 的编码结果保持一个元素的包形状。
 
-## 支持的编码
+## 接受的输入表示
 
-- 数据包必须是确定长度数组，每条记录必须是确定长度映射。文本和字节串同样采用确定长度；本版在整个输入中拒绝不定长项，包括未知扩展内部。
-- 15 个已知标签使用 RFC 8428 的整数键。未知整数键、已知标签的文本别名以及其他键类型返回 `InvalidCborLabel`。扩展使用文本标签，普通扩展忽略，末尾 `_` 的未知扩展拒绝。
-- 记录映射中的重复标签返回 `DuplicateKey`，包括未知文本扩展。未知扩展的嵌套结构由 CBOR 库解码后丢弃，内部映射不另做 SenML 标签或重复键检查。
-- `vd` 必须是字节串，`vs` 必须是文本，`vb` 必须是布尔。空字节串、空文本、零和 `false` 都保留。UTF-8 由依赖解码器严格校验。
-- 数字接受 CBOR 整数、binary16／32／64 浮点数及 Tag 4 十进制分数。分数必须是 `[整数指数, 整数尾数]`，使用标准 JSON 数字转换得到 binary64 投影，沿用有限数、非零下溢和数字文本长度检查。
-- `bver` 的 CBOR 表示必须是无符号整数 10，浮点或 Tag 4 形式会被拒绝。
+- 非流式 SenML 的顶层数组必须采用确定长度。记录映射可采用确定长度或不定长；不定长映射逐个计数成员，重复标签、缺失值、截断及多余 break 仍拒绝。
+- 接受非首选的整数、长度和标签参数宽度。输出使用最短参数宽度，字段按标准整数键的编码顺序排列。首选编码与可接受输入的区别见 [RFC 8949 §4.1](https://www.rfc-editor.org/rfc/rfc8949.html#section-4.1)。
+- 15 个基础标签使用标准整数键。未知整数键、已知标签的文本别名及其他键类型返回 `InvalidCborLabel`；扩展使用文本标签。分块文本标签合并后再识别强制扩展后缀。
+- `vs` 必须为确定长度文本串，`vd` 必须为确定长度字节串。名称、单位及扩展标签也可使用合法分块文本；累计长度受字符串预算约束。每个文本块独立检查 UTF-8。
+- 普通未知扩展按配置忽略，强制扩展拒绝。被忽略的值按字节跳过并检查结构、文本和深度，支持其中合法的不定长容器与字符串，不构造其完整对象树。内部映射不另作 SenML 字段校验。
+- 数字接受基本整数、binary16／32／64 浮点和 Tag 4 十进制分数；非有限测量数值拒绝。基本整数范围为 `-2^64` 至 `2^64−1`。
+- Tag 4 的指数与尾数目前接受基本整数，其两元素数组可为确定长度或不定长。Tag 2／3 大整数及作为 Tag 4 尾数的大整数尚未支持。
+- `bver` 必须为无符号整数 10；浮点和 Tag 4 表示的版本拒绝。RFC 9100 特征扩展尚未实现。
 
-底层复用 [2515050242/cbor@0.1.2](https://mooncakes.io/docs/2515050242/cbor@0.1.2)，固定该版本。它要求整数参数和长度使用最短形式，整数范围为 `-2^63` 至 `2^64−1`；超出该范围的负整数和非最短参数编码返回 `InvalidCbor`。Tag 2／3 大整数不在本版范围内。该范围以外的测量可使用有限浮点表示；完整 RFC 输入形式的覆盖仍需后续扩展。
+## 数值往返
 
-## 数字往返
+基本整数生成准确十进制文本，包括 `9007199254740993`、`18446744073709551615`、`-9223372036854775809` 和 `-18446744073709551616`。这些普通整数字面量可以继续输出为基本 CBOR 整数。负整数编码使用无符号参数，避免经 Int64 截断或经浮点舍入。
 
-CBOR 输入的整数会保留准确十进制文本，如 `9007199254740993` 和 `18446744073709551615`；`as_double()` 仍可能舍入。Tag 4 保留为 `尾数e指数`，例如 `123e-2`。浮点数没有原始十进制拼写，使用解码后的数字文本。
+`Number::as_double()` 仍提供可能舍入的近似值；实际基值和时间运算采用 binary64。Tag 4 保留为十进制指数文本，例如 `123e-2`；有小数点或指数的数值输出使用 binary64 投影。浮点输入没有原始十进制拼写。输出不保留普通未知扩展，也不以 CBOR 字节变化判断业务重试身份。
 
-编码时，不含小数点或指数、且能由 64 位整数表示的普通整数字面量采用整数编码，`-0` 采用浮点编码以保留符号。其他数字使用 binary64 投影；例如 `9007199254740993.0` 转成浮点后原文会改变，但投影与原 JSON 的 binary64 投影一致。输出不保留十进制拼写、Tag 4 形式和普通未知扩展。
+## 资源与诊断
 
-## 资源与错误
+`max_input_bytes` 默认 1,048,576，在读取前检查。`ParseLimits` 继续约束原始记录数、成员数、嵌套深度、已知字符串／二进制值及数字文本长度；CBOR 不使用 JSON 的 `max_input_code_units` 作为字节限制。
 
-`max_input_bytes` 默认 `1048576`，必须为正数，在解码前检查。`ParseLimits.max_input_code_units` 只用于 JSON；CBOR 不使用它限制输入字节。
+读取声明长度后，先与剩余字节比较，再转为机器索引。记录数和成员数在分配对应记录与字段前检查；不定长容器在读取过程中计数。顶层数组深度为 1、记录映射为 2、键和值为 3，标签内容和分块项增加相应层级。忽略扩展不会绕过深度与结构检查。
 
-其他 `ParseLimits` 参数继续有效：记录数、每条成员数、数字文本长度和字符串 UTF-16 单元上限。CBOR 二进制值按字节计入 `max_string_code_units`。`max_depth` 按 CBOR 项层级计数：顶层数组是 1，记录映射是 2，键和值是 3，Tag 的内容额外增加一层。
+三个 `to_cbor_bytes(max_output_bytes?)` 默认使用 4,194,304 字节的保守输出预算。编码前累计文本、字节、字段和容器成本；超限返回 `OutputLimit`，非正预算返回 `InvalidLimits`。预算约束相应输出阶段，整个进程的内存用量需要另行测量。
 
-调用通用解码器前，预检器先扫描字节头，检查完整输入、尾随内容、嵌套、容器数量及字符串声明长度。长度始终先与剩余字节比较，才转为机器索引，阻止巨大声明被截断或用于分配。未知扩展同样接受这一预检。无效编码返回 `InvalidCbor`，不定长或保留形式返回 `UnsupportedCborType`。
+共享字段错误保留原始记录索引和标准字段名。线格式、UTF-8 或结构错误可能没有记录索引；错误不回显负载或应用扩展名，失败不返回部分包。
 
-三个 `to_cbor_bytes(max_output_bytes?)` 默认采用 `4194304` 字节的保守预算。编码前按 Int64 累计 UTF-8、字节串、字段和容器头开销；超限返回 `OutputLimit`，参数非正返回 `InvalidLimits`。上界可能提前拒绝实际编码尚未达到上限的包；空包需要 1 字节。该预算约束输出，不作为整个进程的内存配额。
-
-字段语义错误继续提供原始记录索引和字段名称；预检与底层编码错误可能没有记录索引。诊断不回显原始数值或二进制内容。失败不返回部分包。
-
-## 复现验证
-
-CBOR 的 19 项 MoonBit 测试在 native、JS、wasm-gc 运行，包含独立字节样本、准确整数边界、浮点宽度、Tag 4、二进制、重复标签、截断、巨大声明、不定长项、UTF-8 和资源上限。字节入口及 CoAP 子包另测实际传输中的 CBOR 接收。
-
-Python 3.9 及以上可运行外部编码对照；使用独立虚拟环境安装测试依赖：
+## 独立验证
 
 ```sh
 moon update
+moon test --target js
 python -m pip install cbor2==5.7.1
 python scripts/check_cbor_interop.py --target js
-python scripts/check_cbor_interop.py --target native
-python scripts/check_cbor_interop.py --target wasm-gc
 ```
 
-脚本先用 Python `cbor2` 读取 MoonBit 输出，再用它生成包含 Tag 4、二进制、布尔和最大 UInt64 的数据包交给 SenWeave，核对原始值与展开结果。三个本地目标均通过；CI 另设 JS 对照任务。外部 SenML 库的已验证场景与差异见 [互操作范围](interoperability.md)。
+脚本使用独立 `cbor2` 检查双向原始／展开数据，并额外核对六类表示：不定长映射、非首选参数宽度、三类宽负整数和分块名称。每类分别核对原始 JSON、原始 CBOR、展开 JSON 与展开 CBOR。可将 `js` 替换为 `native` 或 `wasm-gc`。
+
+测试另覆盖配额、重复标签、畸形块、Tag 4 结构和四个合法变体样本的全部截断前缀。完整能力范围见[标准覆盖表](senml-support.md)，外部 SenML 实现的对照范围见[互操作记录](interoperability.md)。

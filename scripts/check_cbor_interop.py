@@ -75,11 +75,28 @@ def main():
     assert wire_records[3][2] == 18446744073709551615
     assert type(wire_records[1][4]) is bool
     assert all(all(type(key) is int and key >= 0 for key in row) for row in wire_records)
+    variants = [
+        ("indefinite-map", "81bf0061780201ff", "x", 1),
+        ("nonpreferred-arguments", "9801b802180078017818021801", "x", 1),
+        ("negative-beyond-int64", "81a2006178023b8000000000000000", "x", -9223372036854775809),
+        ("negative-near-lower-bound", "81a2006178023bfffffffffffffffe", "x", -18446744073709551615),
+        ("negative-lower-bound", "81a2006178023bffffffffffffffff", "x", -18446744073709551616),
+        ("chunked-name", "81a2007f61786179ff0201", "xy", 1),
+    ]
+    for case, hexadecimal, name, value in variants:
+        wire = bytes.fromhex(hexadecimal)
+        assert cbor2.loads(wire) == [{0: name, 2: value}], case
+        result = run_example(args.target, wire)
+        assert cbor2.loads(bytes.fromhex(result["raw_cbor_hex"])) == [{0: name, 2: value}], case
+        assert json.loads(result["raw_json"]) == [{"n": name, "v": value}], case
+        assert result["resolved"] == [{"n": name, "v": value, "t": 1793000000}], case
+        assert cbor2.loads(bytes.fromhex(result["resolved_cbor_hex"])) == [{0: name, 2: value, 6: 1793000000}], case
     print(json.dumps({
         "target": args.target,
         "codec": "cbor2==5.7.1",
         "outbound_records": len(raw),
         "inbound_records": len(incoming),
+        "representation_variants": len(variants),
         "status": "passed",
     }))
 

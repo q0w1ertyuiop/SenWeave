@@ -70,6 +70,10 @@ test "archive consumer preserves integer text and crosses public CBOR APIs" {
   assert_eq(text.contains("18446744073709551615"), true)
   let wire = @senweave.parse_json(text).to_cbor_bytes()
   assert_eq(@senweave.parse_cbor(wire).resolve().to_json_string(), text)
+  let raw = @senweave.parse_cbor(b"\\x81\\xbf\\x00\\x61x\\x02\\x3b\\xff\\xff\\xff\\xff\\xff\\xff\\xff\\xfe\\xff")
+  let raw_json = raw.to_json_string()
+  assert_eq(raw_json.contains("-18446744073709551615"), true)
+  assert_eq(@senweave.parse_json(raw_json).to_cbor_bytes(), raw.to_cbor_bytes())
 }
 
 ///|

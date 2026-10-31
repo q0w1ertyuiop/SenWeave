@@ -267,7 +267,7 @@ test "nonfinite float values malformed UTF-8 and trailing bytes fail closed" {
 }
 
 ///|
-test "preflight rejects truncation huge length declarations and indefinite items" {
+test "CBOR rejects truncation huge declarations and restricted indefinite values" {
   for
     wire in [
       b"", b"\x81", b"\x81\xa1\x00", b"\x81\xa2\x00\x61x\x02\xfb\x00", b"\x81\xa2\x00\x61x\x08\x5b\x7f\xff\xff\xff\xff\xff\xff\xff",
@@ -277,7 +277,7 @@ test "preflight rejects truncation huge length declarations and indefinite items
   }
   for
     wire in [
-      b"\x9f\xff", b"\x81\xbf\xff", b"\x81\xa2\x00\x61x\x08\x5f\xff", b"\x81\xa2\x00\x61x\x03\x7f\x60\xff",
+      b"\x9f\xff", b"\x81\xa2\x00\x61x\x08\x5f\xff", b"\x81\xa2\x00\x61x\x03\x7f\x60\xff",
     ] {
     let _ = cbor_rejected(wire, @senweave.UnsupportedCborType)
   }
@@ -320,7 +320,7 @@ test "bounded ingress checks input records fields depth strings binary and numbe
 }
 
 ///|
-test "unknown extension nesting is bounded before the generic decoder runs" {
+test "unknown extension nesting is bounded while skipping its wire items" {
   let buffer = Buffer()
   buffer.write_bytes(b"\x81\xa3\x00\x61x\x02\x01\x61z")
   for _ in 0..<40 {
@@ -353,13 +353,7 @@ test "empty packs context records and conservative output budgets" {
 }
 
 ///|
-test "root record shape and decoder profile restrictions are explicit" {
+test "CBOR root and record shape are checked before their fields" {
   let _ = cbor_rejected(b"\xa0", @senweave.InvalidRoot)
   let _ = cbor_rejected(b"\x81\x01", @senweave.InvalidRecord)
-  // The selected codec requires shortest integer/length encodings.
-  let _ = cbor_rejected(b"\x81\xa2\x00\x61x\x02\x18\x01", @senweave.InvalidCbor)
-  let _ = cbor_rejected(
-    b"\x81\xa2\x00\x61x\x02\x3b\x80\x00\x00\x00\x00\x00\x00\x00",
-    @senweave.InvalidCbor,
-  )
 }
