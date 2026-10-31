@@ -9,6 +9,7 @@ pub struct ResolvedRecord {
   value : MeasurementValue?
   sum : Number?
   update_time : Number?
+  content_format : ContentFormatSpec?
   source_index : Int32
   ignored_extension_count : Int32
 } derive(Debug)

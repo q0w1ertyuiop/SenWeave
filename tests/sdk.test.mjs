@@ -131,6 +131,35 @@ test('SDK surfaces extension loss and offers strict rejection', () => {
   assert.throws(() => resolve(input, { referenceTime: 1793000000, rejectExtensions: true }), rejected('IgnoredExtensions'));
 });
 
+test('SDK retains binary content metadata through every format and independent filtering', () => {
+  const input = JSON.stringify([{ bct: '60', bt: 1793000000 },
+    { n: 'blob', vd: 'AP8' }, { n: 'temp', v: 7 },
+    { n: 'photo', vd: 'AA', ct: 'image/png' }]);
+  const expected = [{ n: 'blob', t: 1793000000, vd: 'AP8', ct: '60' },
+    { n: 'temp', t: 1793000000, v: 7 },
+    { n: 'photo', t: 1793000000, vd: 'AA', ct: 'image/png' }];
+  for (const to of ['json', 'cbor', 'xml']) {
+    const wire = resolve(input, { to, rejectExtensions: true });
+    assert.equal(wire.ignoredExtensions, 0);
+    assert.equal(check(wire.data, { from: to, rejectExtensions: true }).measurements, 3);
+    assert.deepEqual(JSON.parse(resolve(wire.data, { from: to }).data), expected);
+    assert.deepEqual(JSON.parse(resolve(wire.data, { from: to, name: 'blob' }).data), [expected[0]]);
+  }
+});
+
+test('SDK rejects content format errors and counts inherited metadata before filtering', () => {
+  assert.throws(() => check('[{"n":"x","vd":"AA","ct":"private-format"}]'), error => {
+    assert.equal(error.code, 'InvalidContentFormat');
+    assert.equal(error.diagnostic.field, 'ct');
+    assert.doesNotMatch(JSON.stringify(error.diagnostic), /private-format/);
+    return true;
+  });
+  assert.throws(() => check('[{"n":"x","v":1,"ct":"60"}]'), rejected('InvalidRecord'));
+  const input = JSON.stringify([{ bct: 'application/' + 'a'.repeat(100) }, { n: 'x', vd: 'AA' }]);
+  assert.throws(() => resolve(input, { referenceTime: 1793000000, name: 'missing',
+    limits: { maxExpandedCodeUnits: 300 } }), rejected('ExpansionLimit'));
+});
+
 test('SDK checks byte limits before decoding and validates options without coercion', () => {
   assert.throws(() => check(new Uint8Array(1_048_577).fill(255)), rejected('InputLimit'));
   assert.throws(() => check('中'.repeat(350000)), rejected('InputLimit'));

@@ -72,7 +72,8 @@ pub fn Label::cbor_key(self : Label) -> Int32 {
 }
 
 ///|
-/// Look up a known JSON label. Returns None for extensions and unknown names.
+/// Look up an RFC 8428 base label. Returns None for extensions, including
+/// understood RFC 9193 ct/bct fields, which have no integer CBOR labels.
 /// No whitespace trimming, aliasing, or case conversion is performed.
 pub fn Label::from_json_name(name : String) -> Label? {
   match name {
@@ -116,4 +117,14 @@ pub fn Label::from_cbor_key(key : Int32) -> Label? {
     8 => Some(DataValue)
     _ => None
   }
+}
+
+///|
+fn is_content_format_label(name : String) -> Bool {
+  name == "ct" || name == "bct"
+}
+
+///|
+fn is_understood_label(name : String) -> Bool {
+  Label::from_json_name(name) is Some(_) || is_content_format_label(name)
 }

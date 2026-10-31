@@ -624,6 +624,114 @@
       "input": "[{\"n\":\"x\",\"v\":1}]",
       "cbor_hex": "81a3006178020120f94900",
       "error": "WrongType"
+    },
+    {
+      "id": "content-format-inheritance",
+      "spec": "9193-3-4-6",
+      "input": "[{\"bct\":\"60\",\"bt\":1793000000},{\"n\":\"blob\",\"vd\":\"AA\"},{\"n\":\"temp\",\"v\":7},{\"n\":\"photo\",\"vd\":\"AP8\",\"ct\":\"image/png\"},{\"n\":\"blob2\",\"vd\":\"\"}]",
+      "expected": [
+        {
+          "n": "blob",
+          "vd": "AA",
+          "ct": "60",
+          "t": 1793000000
+        },
+        {
+          "n": "temp",
+          "v": 7,
+          "t": 1793000000
+        },
+        {
+          "n": "photo",
+          "vd": "AP8",
+          "ct": "image/png",
+          "t": 1793000000
+        },
+        {
+          "n": "blob2",
+          "vd": "",
+          "ct": "60",
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "content-format-parameters",
+      "spec": "9193-3-4-6",
+      "input": "[{\"n\":\"x\",\"vd\":\"AA\",\"ct\":\"text/plain;title=\\\"x@home;y=1\\\"@gzip@deflate\"}]",
+      "expected": [
+        {
+          "n": "x",
+          "vd": "AA",
+          "ct": "text/plain;title=\"x@home;y=1\"@gzip@deflate",
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "content-format-number-boundary",
+      "spec": "9193-3-4-6",
+      "input": "[{\"bct\":\"0\"},{\"n\":\"x\",\"vd\":\"AA\",\"ct\":\"65535\"}]",
+      "expected": [
+        {
+          "n": "x",
+          "vd": "AA",
+          "ct": "65535",
+          "t": 1793000000
+        }
+      ]
+    },
+    {
+      "id": "content-format-base-replacement",
+      "spec": "9193-3-4-6",
+      "input": "[{\"bct\":\"image/png\",\"n\":\"late\",\"vd\":\"AA\",\"t\":1793000002},{\"bct\":\"0\",\"n\":\"text\",\"vs\":\"ok\",\"t\":1793000001},{\"n\":\"early\",\"vd\":\"AQ\",\"t\":1793000000}]",
+      "expected": [
+        {
+          "n": "early",
+          "vd": "AQ",
+          "ct": "0",
+          "t": 1793000000
+        },
+        {
+          "n": "text",
+          "vs": "ok",
+          "t": 1793000001
+        },
+        {
+          "n": "late",
+          "vd": "AA",
+          "ct": "image/png",
+          "t": 1793000002
+        }
+      ]
+    },
+    {
+      "id": "content-format-out-of-range",
+      "spec": "9193-3-4-6",
+      "input": "[{\"n\":\"x\",\"vd\":\"AA\",\"ct\":\"65536\"}]",
+      "error": "InvalidContentFormat"
+    },
+    {
+      "id": "content-format-wrong-type",
+      "spec": "9193-3-4-6",
+      "input": "[{\"n\":\"x\",\"vd\":\"AA\",\"ct\":60}]",
+      "error": "WrongType",
+      "formats": [
+        "json",
+        "cbor"
+      ]
+    },
+    {
+      "id": "content-format-without-data",
+      "spec": "9193-3-4-6",
+      "input": "[{\"n\":\"x\",\"v\":1,\"ct\":\"60\"}]",
+      "error": "InvalidRecord"
+    },
+    {
+      "id": "content-format-empty-base",
+      "spec": "9193-3-4-6",
+      "input": "[{\"bct\":\"\"}]",
+      "error": "InvalidContentFormat"
     }
   ]
 }

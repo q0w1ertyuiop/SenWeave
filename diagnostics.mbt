@@ -22,6 +22,7 @@ pub(all) enum ErrorCode {
   UnsupportedVersion
   InvalidName
   InvalidData
+  InvalidContentFormat
   MissingReferenceTime
   InvalidReferenceTime
   ArithmeticOverflow
@@ -82,7 +83,7 @@ fn reject(
   column? : Int32,
 ) -> Unit raise SenmlError {
   let safe_field = match field {
-    Some(name) if Label::from_json_name(name) is Some(_) => Some(name)
+    Some(name) if is_understood_label(name) => Some(name)
     _ => None
   }
   raise Invalid({

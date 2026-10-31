@@ -1,14 +1,14 @@
 # SenML 参考实现比较
 
-核查日期：2026-10-31。SenWeave 为 `0.1.0-dev.15`。共同样本已实际运行；XML 对照已加入；EXI 和其他未覆盖能力继续单列。
+核查日期：2026-10-31。SenWeave 为 `0.1.0-dev.16`。共同样本已实际运行；XML 对照已加入；EXI 和其他未覆盖能力继续单列。
 
 | 维度 | SenWeave | Go absmach/senml | Python KPN SenML 1.0.1 |
 | --- | --- | --- | --- |
 | 数据模型 | MoonBit 类型化记录、原始数字文本与包上下文 | Record／Pack；公共数值字段为 float64 | 面向包和执行器记录的对象模型 |
 | 表示 | JSON／CBOR／XML；EXI 待实现 | README 与源码提供 JSON／XML／CBOR 入口 | 发布版本提供 JSON／CBOR |
-| 校验与展开 | 共同样本 110 项符合固定期望 | Decode 内含 Validate；Normalize 与原始编码分别实测 | 共同样本 40 项调用 input-update；未提供通用 Validate／Normalize 对照 |
+| 校验与展开 | 共同样本 133 项符合固定期望 | Decode 内含 Validate；Normalize 与原始编码分别实测 | 共同样本 40 项调用 input-update；未提供通用 Validate／Normalize 对照 |
 | 单位 | 当前按字符串处理，注册信息与次级单位待实现 | 单位能力需继续逐项核查 | 上游文档列有单位注册信息；未完成逐项运行核对 |
-| 扩展与版本 | 当前 version 10；普通扩展可忽略或按接入策略拒绝 | 强制扩展、未知版本、显式零值／空值均已测出具体差异 | 已实测其值更新入口对这些输入的行为；该入口不构成完整语义校验 |
+| 扩展与版本 | 当前 version 10；ct/bct 已实现，普通未知扩展可忽略或按接入策略拒绝 | 强制扩展、未知版本、显式零值／空值均已测出具体差异 | 已实测其值更新入口对这些输入的行为；该入口不构成完整语义校验 |
 | 数值范围 | 基本 CBOR 整数 `-2^64` 至 `2^64−1` 原文与整数编码可保留；实际算术为 binary64 | 已测大整数表示变化、负整数下界和 Tag 4；分别报告原文与 binary64 比较 | 共同样本核对准确整数值；文本和数据值有发布版本异常 |
 | 复用方式 | MoonBit 公共包、三后端测试、Node.js SDK；注册表发布待完成 | Go 模块 | Python 发布包 |
 
@@ -20,7 +20,7 @@
 
 ## 共同样本与阶段
 
-入口为 [run.py](../scripts/senml_comparison/run.py)，[cases.json](../scripts/senml_comparison/cases.json) 保存 40 组输入、标准条款或接入策略以及期望；按 JSON／CBOR 格式得到 72 项。`--xml` 增加 31 项可直接对应的共同输入和 [xml_cases.json](../scripts/senml_comparison/xml_cases.json) 的 7 项 XML 专项输入，合计 47 组、110 项。样本包括数值、零、false、空／Unicode 文本、二进制、仅含和、继承与清零、相对时间、上下文记录、扩展、版本、错误输入、整数边界及 CBOR 编码变体。未采用随机生成样本。
+入口为 [run.py](../scripts/senml_comparison/run.py)，[cases.json](../scripts/senml_comparison/cases.json) 保存 48 组输入、标准条款或接入策略以及期望；按 JSON／CBOR 格式得到 88 项。`--xml` 增加 38 项可直接对应的共同输入和 [xml_cases.json](../scripts/senml_comparison/xml_cases.json) 的 7 项 XML 专项输入，合计 55 组、133 项。样本包括数值、零、false、空／Unicode 文本、二进制、仅含和、继承与清零、相对时间、上下文记录、扩展、版本、错误输入、整数边界、CBOR 编码变体及 RFC 9193 内容格式。未采用随机生成样本。
 
 1. **解码与校验：** SenWeave 的 `parse_json`／`parse_cbor`／`parse_xml` 对齐 Go 的 `Decode`，后者内部调用 `Validate`。坏输入分别保存错误与失败阶段，不以 Go 的结果决定标准期望。
 2. **原始编码：** 两端分别输出原始 JSON／CBOR，XML 输入另核对原始 XML，再由 SenWeave 重读、展开并与固定期望比较，检查清零字段是否在编码中丢失。外部 cbor2 还检查展开 CBOR 的字段及字节串类型。Python ElementTree 独立产生 XML，并读取 SenWeave 的原始／展开 XML，核对命名空间、属性及转义后的值。
@@ -31,14 +31,17 @@
 
 | 结果 | 数量与含义 |
 | --- | --- |
-| SenWeave | 110 项满足固定期望，包含 38 项 XML 输入；有效样本另核对原始编码与展开输出 |
+| SenWeave | 133 项满足固定期望，包含 45 项 XML 输入；有效样本另核对原始编码与展开输出 |
 | Go 一致 | 48 项在所测结果上相同，包括共同拒绝的输入 |
-| Go 已解释差异 | 62 项：48 项标准语义或输入表示覆盖差异，8 项数值表示差异，3 项版本策略，2 项接入策略，1 项失败阶段差异 |
+| Go 已解释差异 | 80 项：48 项标准语义或输入表示覆盖、8 项数值表示、3 项版本策略、2 项接入策略、1 项失败阶段、14 项内容格式扩展覆盖、4 项二进制编码覆盖 |
+| Go 无关原因拒绝 | 5 项与 SenWeave 同在解码校验阶段拒绝，但 Go 因字节串类型或空名称失败，没有验证内容格式；不计入一致项 |
 | Python input-update | 40 项：34 次值更新与固定期望一致，文本的 4 次 NameError 和二进制的 2 次 KeyError 已固定复现 |
 
 这些是包含边界和反例的定向样本数量，不是随机抽样的总体错误率。逐项差异和原因固定在 [go_expectations.json](../scripts/senml_comparison/go_expectations.json) 和 [xml_expectations.json](../scripts/senml_comparison/xml_expectations.json)，新增或消失的差异都会使检查失败。
 
-XML 专项还复现 Go 接受重复属性、未检查根命名空间、拒绝合法 `+010` 整数版本词法的差异；DTD 拒绝单列为 SenWeave 接入策略。JSON 的 `null` 在 XML 没有直接对应表示，因此不把字符串 `None` 伪作等价输入。
+XML 专项还复现 Go 接受重复属性、未检查根命名空间、拒绝合法 `+010` 整数版本词法的差异；DTD 拒绝单列为 SenWeave 接入策略。JSON 的 `null` 在 XML 没有直接对应表示，因此不把字符串 `None` 伪作等价输入。JSON／CBOR 数值类型的 `ct:60` 在 XML 变成合法字符串属性，不用于同类型反例对照。
+
+RFC 9193 的八组输入同时检查原始字段保留和展开结果。固定 Go 模型没有 `ct`／`bct` 字段，其丢弃、基准上下文拒绝与先行 CBOR 字节串拒绝分别记录。`go_unrelated_rejections` 单列无关原因拒绝，避免失败阶段相同掩盖未覆盖的语义。
 
 具体观察：
 
@@ -61,4 +64,4 @@ python scripts/senml_comparison/run.py --xml
 
 脚本构建 MoonBit JS 对照入口和 Go 适配器，结果写到 `_build/interop/senml-comparison.json`，包含全部输入、固定期望、实际输出、失败阶段、工具版本和分类。CI 的 `senml-comparison` 任务运行同一入口，并保存同名 artifact 30 天；过期后可用对应提交重新运行。
 
-不带 `--xml` 可单独运行原有 40 组、72 项 JSON／CBOR 对照。EXI、单位体系或后续 SenML 扩展对照尚未执行；这些能力的状态仍见[标准覆盖表](senml-support.md)。
+不带 `--xml` 可单独运行48 组、88 项 JSON／CBOR 对照。EXI、单位体系和版本特征对照尚未执行；这些能力的状态仍见[标准覆盖表](senml-support.md)。

@@ -130,7 +130,7 @@ fn parse_record(
         "Member name exceeds the configured string limit.",
       )
     }
-    if Label::from_json_name(key) is None {
+    if !is_understood_label(key) {
       if key.has_suffix("_") {
         reject(
           UnsupportedExtension,
@@ -145,6 +145,8 @@ fn parse_record(
   let base_name = read_text(fields, index, "bn", limits)
   let base_time = read_number(fields, index, "bt", limits)
   let base_unit = read_text(fields, index, "bu", limits)
+  let base_content_format = read_content_format(fields, index, "bct", limits)
+  let content_format = read_content_format(fields, index, "ct", limits)
   let base_value = read_number(fields, index, "bv", limits)
   let base_sum = read_number(fields, index, "bs", limits)
   let base_version = read_number(fields, index, "bver", limits)
@@ -203,13 +205,22 @@ fn parse_record(
   } else {
     None
   }
+  if content_format is Some(_) && !(value is Some(Data(_))) {
+    reject(
+      InvalidRecord,
+      Some(index),
+      Some("ct"),
+      "Content format requires a binary data value in the same record.",
+    )
+  }
   if value is None && sum is None {
     let has_base = base_name is Some(_) ||
       base_time is Some(_) ||
       base_unit is Some(_) ||
       base_value is Some(_) ||
       base_sum is Some(_) ||
-      base_version is Some(_)
+      base_version is Some(_) ||
+      base_content_format is Some(_)
     let has_regular = name is Some(_) ||
       unit is Some(_) ||
       time is Some(_) ||
@@ -230,12 +241,14 @@ fn parse_record(
     base_value,
     base_sum,
     base_version,
+    base_content_format,
     name,
     unit,
     value,
     sum,
     time,
     update_time,
+    content_format,
     ignored_extension_count,
   }
 }

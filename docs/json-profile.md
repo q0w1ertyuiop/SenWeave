@@ -45,3 +45,7 @@ JSON 语法与 Unicode 标量字符串由标准库处理。转义解码后重复
 `Pack::to_json_string(max_output_code_units?)` 序列化原始包，保留基字段、记录顺序、相对时间与数字文本，不需要参考时刻。普通未知扩展仍按解析策略丢弃。输出默认使用 4,194,304 UTF-16 单元的保守预算，在最终序列化前累计字符串最坏转义及结构成本；可能提前拒绝实际更小的输出，非正预算返回 `InvalidLimits`。这与 `ResolvedPack` 的独立测量输出分别使用。
 
 `parse_json` 用于类型化读取与字段校验，其返回记录仍依赖前文上下文。`resolve` 可继续执行基字段和相对时间展开，随后输出独立 JSON／CBOR 测量。`parse_cbor` 进入同一模型，见 [CBOR 约定](cbor-profile.md)。已验证 `cbor2` 编码交换及 KPN SenML 指定场景，见 [互操作范围](interoperability.md)。Mooncakes 发布尚未完成。
+
+## 二进制内容格式
+
+已理解的 RFC 9193 `ct`／`bct` 使用同一校验类型并参与原始输出及二进制测量展开；严格扩展策略接受这两个字段。字段表示、语法、继承与预算见 [内容格式说明](content-formats.md)。

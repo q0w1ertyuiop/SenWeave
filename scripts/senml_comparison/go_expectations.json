@@ -330,5 +330,115 @@
     ],
     "classification": "failure-stage",
     "reason": "SenWeave rejects non-finite addition during resolve. Go Normalize succeeds with +Inf; its JSON encoder rejects the result later."
+  },
+  "content-format-inheritance/json": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "extension-coverage",
+    "reason": "The pinned Go model discards bct and then rejects the base-only context as an empty-name record. RFC 9193 base-context semantics are not implemented."
+  },
+  "content-format-parameters/json": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "extension-coverage",
+    "reason": "The pinned Go model has no ct/bct fields. Raw encodings discard them and Normalize does not materialize binary content-format inheritance."
+  },
+  "content-format-number-boundary/json": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "extension-coverage",
+    "reason": "The pinned Go model discards bct and then rejects the base-only context as an empty-name record. RFC 9193 base-context semantics are not implemented."
+  },
+  "content-format-base-replacement/json": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor"
+    ],
+    "classification": "extension-coverage",
+    "reason": "The pinned Go model has no ct/bct fields. Raw encodings discard them and Normalize does not materialize binary content-format inheritance."
+  },
+  "content-format-out-of-range/json": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "extension-coverage",
+    "reason": "The pinned Go model discards ct and accepts this input without RFC 9193 syntax, type or binary-value validation."
+  },
+  "content-format-wrong-type/json": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "extension-coverage",
+    "reason": "The pinned Go model discards ct and accepts this input without RFC 9193 syntax, type or binary-value validation."
+  },
+  "content-format-without-data/json": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "extension-coverage",
+    "reason": "The pinned Go model discards ct and accepts this input without RFC 9193 syntax, type or binary-value validation."
+  },
+  "content-format-empty-base/json": {
+    "stages": [],
+    "classification": "unrelated-rejection",
+    "reason": "Both reject, but Go reports empty name after discarding bct; it does not validate the invalid empty content format."
+  },
+  "content-format-inheritance/cbor": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "encoding-coverage",
+    "reason": "The pinned Go model expects string vd and rejects the standard CBOR byte string before content-format semantics can be exercised."
+  },
+  "content-format-parameters/cbor": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "encoding-coverage",
+    "reason": "The pinned Go model expects string vd and rejects the standard CBOR byte string before content-format semantics can be exercised."
+  },
+  "content-format-number-boundary/cbor": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "encoding-coverage",
+    "reason": "The pinned Go model expects string vd and rejects the standard CBOR byte string before content-format semantics can be exercised."
+  },
+  "content-format-base-replacement/cbor": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "encoding-coverage",
+    "reason": "The pinned Go model expects string vd and rejects the standard CBOR byte string before content-format semantics can be exercised."
+  },
+  "content-format-out-of-range/cbor": {
+    "stages": [],
+    "classification": "unrelated-rejection",
+    "reason": "The pinned Go model expects string vd and rejects the standard CBOR byte string before content-format semantics can be exercised."
+  },
+  "content-format-wrong-type/cbor": {
+    "stages": [],
+    "classification": "unrelated-rejection",
+    "reason": "The pinned Go model expects string vd and rejects the standard CBOR byte string before content-format semantics can be exercised."
+  },
+  "content-format-without-data/cbor": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "extension-coverage",
+    "reason": "The pinned Go model discards ct and accepts this input without RFC 9193 syntax, type or binary-value validation."
+  },
+  "content-format-empty-base/cbor": {
+    "stages": [],
+    "classification": "unrelated-rejection",
+    "reason": "Both reject, but Go reports empty name after discarding bct; it does not validate the invalid empty content format."
   }
 }

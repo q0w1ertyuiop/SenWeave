@@ -106,6 +106,17 @@ test "archive consumer exchanges XML using only the public library" {
 }
 
 ///|
+test "archive consumer uses typed binary content formats across codecs" {
+  let spec = @senweave.ContentFormatSpec::parse("60")
+  assert_eq(spec.coap_number(), Some(60))
+  let raw = @senweave.parse_json("[{\\\"bct\\\":\\\"60\\\"},{\\\"n\\\":\\\"blob\\\",\\\"vd\\\":\\\"AA\\\",\\\"t\\\":1793000000}]")
+  assert_eq(raw.record(0).unwrap().base_content_format.unwrap().as_string(), "60")
+  let copy = @senweave.parse_xml(@senweave.parse_cbor(raw.to_cbor_bytes()).to_xml_string())
+  assert_eq(copy.resolve().record(0).unwrap().content_format.unwrap().coap_number(), Some(60))
+  assert_eq(copy.ignored_extension_count(), 0)
+}
+
+///|
 test "archive consumer diagnostics retain standard labels but omit extension names" {
   for (input, expected) in [
     ("[{\\"n\\":\\"x\\",\\"v\\":\\"secret-value\\"}]", Some("v")),
@@ -134,11 +145,12 @@ test "archive consumer uses a public SenML sender without socket dependencies" {
 }
 ''', encoding="utf-8")
         run(["moon", "check", "--target", "all", "--deny-warn"], consumer)
+        consumer_cases = len(re.findall(r'^test "', (consumer / "consumer_test.mbt").read_text(encoding="utf-8"), re.M))
         for target in targets:
-            output = run(["moon", "test", "--target", target], consumer)
-            assert "failed: 0" in output, output
+            output = run(["moon", "test", "--package", "validation/consumer", "--target", target], consumer)
+            assert f"Total tests: {consumer_cases}, passed: {consumer_cases}, failed: 0." in output, output
         print(json.dumps({"module": name, "version": version, "archive_files": len(names),
-            "targets": targets, "consumer_cases": 5, "status": "passed", "sha256": hashlib.sha256(archive.read_bytes()).hexdigest()}))
+            "targets": targets, "consumer_cases": consumer_cases, "status": "passed", "sha256": hashlib.sha256(archive.read_bytes()).hexdigest()}))
 
 
 if __name__ == "__main__":

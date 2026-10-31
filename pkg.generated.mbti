@@ -22,6 +22,14 @@ pub fn SenmlError::diagnostic(Self) -> Diagnostic
 pub fn SenmlError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
+pub struct ContentFormatSpec {
+  // private fields
+} derive(@debug.Debug)
+pub fn ContentFormatSpec::as_string(Self) -> String
+pub fn ContentFormatSpec::coap_number(Self) -> Int32?
+pub fn ContentFormatSpec::parse(String, max_code_units? : Int32) -> Self raise SenmlError
+pub fn ContentFormatSpec::to_repr(Self) -> @debug.Repr
+
 pub struct Diagnostic {
   code : ErrorCode
   record_index : Int32?
@@ -54,6 +62,7 @@ pub(all) enum ErrorCode {
   UnsupportedVersion
   InvalidName
   InvalidData
+  InvalidContentFormat
   MissingReferenceTime
   InvalidReferenceTime
   ArithmeticOverflow
@@ -153,12 +162,14 @@ pub struct Record {
   base_value : Number?
   base_sum : Number?
   base_version : Number?
+  base_content_format : ContentFormatSpec?
   name : String?
   unit : String?
   value : MeasurementValue?
   sum : Number?
   time : Number?
   update_time : Number?
+  content_format : ContentFormatSpec?
   ignored_extension_count : Int32
 } derive(@debug.Debug)
 pub fn Record::is_measurement(Self) -> Bool
@@ -181,6 +192,7 @@ pub struct ResolvedRecord {
   value : MeasurementValue?
   sum : Number?
   update_time : Number?
+  content_format : ContentFormatSpec?
   source_index : Int32
   ignored_extension_count : Int32
 } derive(@debug.Debug)

@@ -53,3 +53,7 @@ python scripts/check_cbor_interop.py --target js
 脚本使用独立 `cbor2` 检查双向原始／展开数据，并额外核对六类表示：不定长映射、非首选参数宽度、三类宽负整数和分块名称。每类分别核对原始 JSON、原始 CBOR、展开 JSON 与展开 CBOR。可将 `js` 替换为 `native` 或 `wasm-gc`。
 
 测试另覆盖配额、重复标签、畸形块、Tag 4 结构和四个合法变体样本的全部截断前缀。完整能力范围见[标准覆盖表](senml-support.md)，外部 SenML 实现的对照范围见[互操作记录](interoperability.md)。
+
+## 二进制内容格式
+
+已理解的 RFC 9193 `ct`／`bct` 使用同一校验类型并参与原始输出及二进制测量展开；严格扩展策略接受这两个字段。字段表示、语法、继承与预算见 [内容格式说明](content-formats.md)。

@@ -216,5 +216,62 @@
     ],
     "classification": "standard-semantics",
     "reason": "An empty DataValue remains a string in Go CBOR output instead of a definite-length byte string."
+  },
+  "content-format-inheritance/xml": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "extension-coverage",
+    "reason": "The pinned Go model discards bct and then rejects the base-only context as an empty-name record. RFC 9193 base-context semantics are not implemented."
+  },
+  "content-format-parameters/xml": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor",
+      "raw_xml",
+      "normalized_xml"
+    ],
+    "classification": "extension-coverage",
+    "reason": "The pinned Go model has no ct/bct fields. Raw encodings discard them and Normalize does not materialize binary content-format inheritance."
+  },
+  "content-format-number-boundary/xml": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "extension-coverage",
+    "reason": "The pinned Go model discards bct and then rejects the base-only context as an empty-name record. RFC 9193 base-context semantics are not implemented."
+  },
+  "content-format-base-replacement/xml": {
+    "stages": [
+      "raw_json",
+      "raw_cbor",
+      "normalized_json",
+      "normalized_cbor",
+      "raw_xml",
+      "normalized_xml"
+    ],
+    "classification": "extension-coverage",
+    "reason": "The pinned Go model has no ct/bct fields. Raw encodings discard them and Normalize does not materialize binary content-format inheritance."
+  },
+  "content-format-out-of-range/xml": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "extension-coverage",
+    "reason": "The pinned Go model discards ct and accepts this input without RFC 9193 syntax, type or binary-value validation."
+  },
+  "content-format-without-data/xml": {
+    "stages": [
+      "validation"
+    ],
+    "classification": "extension-coverage",
+    "reason": "The pinned Go model discards ct and accepts this input without RFC 9193 syntax, type or binary-value validation."
+  },
+  "content-format-empty-base/xml": {
+    "stages": [],
+    "classification": "unrelated-rejection",
+    "reason": "Both reject, but Go reports empty name after discarding bct; it does not validate the invalid empty content format."
   }
 }

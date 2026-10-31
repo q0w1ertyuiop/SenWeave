@@ -27,6 +27,7 @@ pub fn Pack::resolve(
   let mut base_time : Number? = None
   let mut base_value : Number? = None
   let mut base_sum : Number? = None
+  let mut base_content_format : ContentFormatSpec? = None
   let mut expanded_cost : Int64 = 2L
   if expanded_cost > max_expanded_code_units.to_int64() {
     reject(
@@ -52,6 +53,9 @@ pub fn Pack::resolve(
     if record.base_sum is Some(sum) {
       base_sum = Some(sum)
     }
+    if record.base_content_format is Some(format) {
+      base_content_format = Some(format)
+    }
     if !record.is_measurement() {
       continue
     }
@@ -69,6 +73,15 @@ pub fn Pack::resolve(
       None => base_unit
     }
     let name = record.name.unwrap_or("")
+    // RFC 9193 applies the base only to binary data, not text or numbers.
+    let content_format = if record.value is Some(Data(_)) {
+      match record.content_format {
+        Some(_) => record.content_format
+        None => base_content_format
+      }
+    } else {
+      None
+    }
     // Check BEFORE allocating a potentially very long concatenated name.
     expanded_cost += expanded_record_cost(
       base_name.length().to_int64() + name.length().to_int64(),
@@ -77,6 +90,7 @@ pub fn Pack::resolve(
       sum,
       time,
       record.update_time,
+      content_format,
     )
     if expanded_cost > max_expanded_code_units.to_int64() {
       reject(
@@ -93,6 +107,7 @@ pub fn Pack::resolve(
       value,
       sum,
       update_time: record.update_time,
+      content_format,
       source_index: index,
       ignored_extension_count: record.ignored_extension_count,
     })
@@ -202,10 +217,14 @@ fn expanded_record_cost(
   sum : Number?,
   time : Number,
   update_time : Number?,
+  content_format : ContentFormatSpec?,
 ) -> Int64 {
   let mut cost = 128L + 6L * name_length + time.literal.length().to_int64()
   if unit is Some(text) {
     cost += 6L * text.length().to_int64()
+  }
+  if content_format is Some(format) {
+    cost += 6L * format.as_string().length().to_int64()
   }
   match value {
     Some(Numeric(number)) => cost += number.literal.length().to_int64()

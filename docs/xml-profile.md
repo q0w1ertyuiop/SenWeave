@@ -1,4 +1,4 @@
-# SenML XML · 0.1.0-dev.15
+# SenML XML · 0.1.0-dev.16
 
 XML 入口按 [RFC 8428 §7](https://www.rfc-editor.org/rfc/rfc8428.html#section-7) 将十五个基础属性读入与 JSON／CBOR 共用的 `Pack`。解析和写入固定复用 [Milky2018/xml@0.6.1](https://mooncakes.io/docs/Milky2018/xml@0.6.1) 的命名空间事件流和检查型 Writer，在 native、JS、wasm-gc 使用相同代码。
 
@@ -40,3 +40,7 @@ python scripts/senml_comparison/run.py --xml
 ```
 
 XML 专项测试覆盖命名空间、词法、转义、清零、配额、全部截断前缀、DTD 和诊断。共同样本增加 38 项 XML 输入，并使用 Python ElementTree 独立产生／读取 XML，与固定 Go SenML 模块分别核对校验、原始编码和展开。运行结果与差异见[参考实现比较](comparison.md)。EXI 编解码仍待实现。
+
+## 二进制内容格式
+
+已理解的 RFC 9193 `ct`／`bct` 使用同一校验类型并参与原始输出及二进制测量展开；严格扩展策略接受这两个字段。字段表示、语法、继承与预算见 [内容格式说明](content-formats.md)。

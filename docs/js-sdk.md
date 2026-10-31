@@ -1,4 +1,4 @@
-# Node.js SDK · 0.1.0-dev.15
+# Node.js SDK · 0.1.0-dev.16
 
 SDK 为 Node.js 24 及以上提供 ESM／CommonJS 入口和 TypeScript 声明，解析、校验、展开和编码由编译后的 MoonBit 实现完成。宿主传递 JSON／XML 原文或 `Uint8Array`，测量数值不会先经 JavaScript 对象转换。当前接口面向 Node.js，浏览器构建尚未提供。
 
@@ -14,10 +14,10 @@ npm run test:sdk
 npm run verify:package
 ```
 
-最后一条命令重新构建并打包，生成 `_build/npm/q0w1ertyuiop-senweave-0.1.0-dev.15.tgz`，随后在临时项目中离线安装该文件并验证运行与类型。将 `.tgz` 复制到自己的应用目录后：
+最后一条命令重新构建并打包，生成 `_build/npm/q0w1ertyuiop-senweave-0.1.0-dev.16.tgz`，随后在临时项目中离线安装该文件并验证运行与类型。将 `.tgz` 复制到自己的应用目录后：
 
 ```sh
-npm install ./q0w1ertyuiop-senweave-0.1.0-dev.15.tgz
+npm install ./q0w1ertyuiop-senweave-0.1.0-dev.16.tgz
 ```
 
 应用可通过 `import` 或 `require()` 按包名加载，保留现有项目的模块配置。分发包已经包含编译后的核心和必要许可，运行时无需 MoonBit、TypeScript 或额外 npm 包。当前验证针对本地压缩包，npm／Mooncakes 注册表正式发布仍待完成。
@@ -103,3 +103,7 @@ TypeScript 中默认 JSON 结果推导为 `string`，显式 `to: 'cbor'` 推导�
 
 
 NodeNext 按 `import`／`require` 条件分别解析 `dist/index.d.mts` 与 `dist/index.d.cts`；普通 CommonJS／Node 模块解析使用顶层 `types`。两份声明均由 `js/index.d.ts` 构建生成，校验脚本核对它们与源声明一致。分发验证使用 TypeScript 5.9.3，检查两种 NodeNext 入口及 CommonJS／Node 配置，并确认实际选中的声明文件。条件导出与类型格式分别依据 [Node.js 包文档](https://nodejs.org/docs/latest-v24.x/api/packages.html#conditional-exports) 和 [TypeScript 模块参考](https://www.typescriptlang.org/docs/handbook/modules/reference.html#node16-node18-node20-nodenext)。
+
+## 二进制内容格式
+
+已理解的 RFC 9193 `ct`／`bct` 使用同一校验类型并参与原始输出及二进制测量展开；严格扩展策略接受这两个字段。字段表示、语法、继承与预算见 [内容格式说明](content-formats.md)。

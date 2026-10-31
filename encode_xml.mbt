@@ -5,7 +5,7 @@ fn xml_output_attributes(record : Json) -> Array[(String, String)] {
   for
     label in [
       "bn", "bt", "bu", "bv", "bs", "bver", "n", "u", "v", "vs", "vb", "vd", "s",
-      "t", "ut",
+      "t", "ut", "bct", "ct",
     ] {
     if fields.get(label) is Some(value) {
       let text = match value {

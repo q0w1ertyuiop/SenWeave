@@ -11,6 +11,7 @@ fn measurement_json_fields(
   sum : Number?,
   time : Number?,
   update_time : Number?,
+  content_format : ContentFormatSpec?,
 ) -> Map[String, Json] {
   let fields : Map[String, Json] = Map([])
   if name is Some(name) {
@@ -40,6 +41,9 @@ fn measurement_json_fields(
   if update_time is Some(time) {
     fields["ut"] = time.to_json()
   }
+  if content_format is Some(format) {
+    fields["ct"] = Json::string(format.as_string())
+  }
   fields
 }
 
@@ -53,6 +57,7 @@ fn ResolvedRecord::to_json(self : ResolvedRecord) -> Json {
       self.sum,
       Some(self.time),
       self.update_time,
+      self.content_format,
     ),
   )
 }
@@ -66,12 +71,16 @@ fn Record::to_json(self : Record) -> Json {
     self.sum,
     self.time,
     self.update_time,
+    self.content_format,
   )
   if self.base_name is Some(text) {
     fields["bn"] = Json::string(text)
   }
   if self.base_unit is Some(text) {
     fields["bu"] = Json::string(text)
+  }
+  if self.base_content_format is Some(format) {
+    fields["bct"] = Json::string(format.as_string())
   }
   for
     (key, value) in [

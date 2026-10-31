@@ -1,4 +1,4 @@
-# 已验证的互操作范围 · 0.1.0-dev.15
+# 已验证的互操作范围 · 0.1.0-dev.16
 
 这份记录区分通用 CBOR 编码交换与外部 SenML 库的语义交换。测试使用未修改的已发布版本，公共脚本保留实际断言。
 
@@ -17,7 +17,7 @@ python scripts/check_cbor_interop.py --target js
 
 ## Go／Python 共同样本
 
-`scripts/senml_comparison/run.py` 固定 Go `absmach/senml` 提交 `40cd806e5f63` 与 Python `kpn-senml 1.0.1`，使用 `--xml` 运行 47 组、110 项共同输入（含 38 项 XML）分别核对解码校验、原始编码与展开。SenWeave 的 110 项满足固定期望；Go 48 项结果一致，62 项记录了具体阶段和原因；Python 的 40 次输入更新中，34 次更新和 6 次已知异常均按预期复现。相对时刻由测试宿主显式对齐，整数表示与 binary64 等价单列。
+`scripts/senml_comparison/run.py` 固定 Go `absmach/senml` 提交 `40cd806e5f63` 与 Python `kpn-senml 1.0.1`，使用 `--xml` 运行 55 组、133 项共同输入（含 45 项 XML）分别核对解码校验、原始编码与展开。SenWeave 的 133 项满足固定期望；Go 48 项结果一致，80 项记录了差异阶段和原因，另有 5 项因无关原因同阶段拒绝，未算作语义一致；Python 的 40 次输入更新中，34 次更新和 6 次已知异常均按预期复现。相对时刻由测试宿主显式对齐，整数表示与 binary64 等价单列。
 
 共同样本包含错误输入和定向边界，结果数量不表示整体缺陷率。Go／Python 的接口范围、阶段对应、逐项差异、复现入口和 CI artifact 见 [参考实现比较](comparison.md)。以下 KPN 五条交换流程继续独立保留，未与共同样本混合计数。
 

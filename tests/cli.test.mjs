@@ -47,6 +47,20 @@ test('CLI XML failure leaves no output and never echoes application XML text', (
   assert.equal(existsSync(destination), false);
 });
 
+test('CLI keeps content metadata through binary and XML pipelines and rejects invalid metadata', () => {
+  const input = '[{"bct":"60","bt":1793000000},{"n":"blob","vd":"AA"}]';
+  const cbor = run(['resolve', '--to', 'cbor', '--reject-extensions'], input);
+  assert.equal(cbor.status, 0, cbor.err);
+  const xml = run(['resolve', '--from', 'cbor', '--to', 'xml', '--reject-extensions'], cbor.out);
+  assert.equal(xml.status, 0, xml.err);
+  const result = run(['resolve', '--from', 'xml'], xml.out);
+  assert.deepEqual(JSON.parse(result.out), [{ n: 'blob', t: 1793000000, vd: 'AA', ct: '60' }]);
+  const bad = run(['resolve'], '[{"n":"x","vd":"AA","ct":"65536"}]');
+  assert.equal(bad.status, 1);
+  assert.equal(bad.out.length, 0);
+  assert.equal(JSON.parse(bad.err).code, 'InvalidContentFormat');
+});
+
 test('stdin resolution, exact-name filtering and complete validation', () => {
   const result = run(['resolve', '--now', '1793000000', '--name', 'dev:temp'], gateway);
   assert.equal(result.status, 0);

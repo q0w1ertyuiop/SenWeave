@@ -119,6 +119,23 @@ function temporaryLedger() {
   };
 }
 
+test('binary content metadata survives strict CoAP admission and SQLite storage', async t => {
+  const ledger = temporaryLedger();
+  let server, database;
+  try {
+    server = await start(t, '5000', ['--store', ledger.path]);
+    const payload = Buffer.from('[{"bct":"60","bt":1793000000},{"n":"blob","vd":"AP8"}]');
+    assert.equal((await sendMeasurement({ port: server.port, payload, source: 'binary', key: 'one' })).code, 68);
+    database = new DatabaseSync(ledger.path, { readOnly: true });
+    const saved = database.prepare('SELECT senml_json FROM measurements').get();
+    assert.deepEqual(JSON.parse(saved.senml_json), [{ n: 'blob', t: 1793000000, vd: 'AP8', ct: '60' }]);
+    const invalid = Buffer.from('[{"n":"x","vd":"AA","ct":"65536"}]');
+    const socket = await client(t);
+    assert.equal((await exchange(socket, server.port, packet(99, invalid)))[1], 128);
+    assert.equal(database.prepare('SELECT count(*) AS count FROM measurements').get().count, 1);
+  } finally { database?.close(); if (server) await stop(server.child); ledger.cleanup(); }
+});
+
 test('XML Content-Format 310 stores original bytes and business retries once', async t => {
   const ledger = temporaryLedger();
   let server;

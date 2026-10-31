@@ -35,7 +35,7 @@ pub(all) enum MeasurementValue {
 pub extend MeasurementValue with Debug::{to_repr}
 
 ///|
-/// A validated raw JSON/CBOR record. Bases have NOT been applied to regular fields.
+/// A validated raw JSON/CBOR/XML record. Bases have not been applied.
 /// A base-only record updates pack context and is not a measurement.
 /// Unknown, non-mandatory extensions are ignored rather than retained.
 pub struct Record {
@@ -45,12 +45,14 @@ pub struct Record {
   base_value : Number?
   base_sum : Number?
   base_version : Number?
+  base_content_format : ContentFormatSpec?
   name : String?
   unit : String?
   value : MeasurementValue?
   sum : Number?
   time : Number?
   update_time : Number?
+  content_format : ContentFormatSpec?
   ignored_extension_count : Int32
 } derive(Debug)
 

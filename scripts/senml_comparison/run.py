@@ -23,6 +23,7 @@ GO_VERSION = "v1.0.9-0.20261001142627-40cd806e5f63"
 LABELS = {"bn": -2, "bt": -3, "bu": -4, "bv": -5, "bs": -6,
           "bver": -1, "n": 0, "u": 1, "v": 2, "vs": 3,
           "vb": 4, "s": 5, "t": 6, "ut": 7, "vd": 8}
+UNDERSTOOD = set(LABELS) | {"ct", "bct"}
 
 
 def run(args, data=None, cwd=ROOT):
@@ -96,7 +97,8 @@ def records_from_xml(text):
 
 
 def cbor_data_types_valid(hex_text):
-    return all(8 not in record or isinstance(record[8], bytes)
+    return all((8 not in record or isinstance(record[8], bytes)) and
+               all(key not in record or isinstance(record[key], str) for key in ["ct", "bct"])
                for record in cbor2.loads(bytes.fromhex(hex_text)))
 
 
@@ -225,9 +227,12 @@ def compare(output, include_xml):
                 assert equal(project(records_from_xml(actual["resolved_xml"]), now), expected), (key, "resolved_xml")
             else:
                 assert fmt != "xml" and actual.get("resolved_xml_error") == "InvalidXml", key
-            if "xml_input" not in case and "raw_xml" in actual:
-                original = [{k: v for k, v in r.items() if k in LABELS} for r in json.loads(case["input"])]
-                assert equal(records_from_xml(actual["raw_xml"]), original), (key, "raw_xml")
+            if "xml_input" not in case:
+                original = [{k: v for k, v in r.items() if k in UNDERSTOOD} for r in json.loads(case["input"])]
+                assert equal(json.loads(actual["raw_json"]), original), (key, "raw_json")
+                assert equal(records_from_cbor(actual["raw_cbor"]), original), (key, "raw_cbor")
+                if "raw_xml" in actual:
+                    assert equal(records_from_xml(actual["raw_xml"]), original), (key, "raw_xml")
             raw_fields = ["raw_json", "raw_cbor"] + (["raw_xml"] if fmt == "xml" else [])
             for field in raw_fields:
                 copy = roundtrips[(i, "senweave", field)]
@@ -284,7 +289,9 @@ def compare(output, include_xml):
     assert not (expectations.keys() - used), "Remove stale difference expectations"
     summary = {"fixtures": len(cases), "format_cases": len(requests),
                "formats": dict(sorted(Counter(fmt for _, fmt in expanded).items())),
-               "senweave_passed": len(requests), "go_same": sum(not r["go_difference_stages"] for r in reports),
+               "senweave_passed": len(requests),
+               "go_same": sum(r["go_classification"] == "same" for r in reports),
+               "go_unrelated_rejections": sum(r["go_classification"] == "unrelated-rejection" for r in reports),
                "go_documented_differences": sum(bool(r["go_difference_stages"]) for r in reports),
                "go_classifications": dict(sorted(Counter(r["go_classification"] for r in reports).items())),
                "go_difference_stages": dict(sorted(differences.items())),

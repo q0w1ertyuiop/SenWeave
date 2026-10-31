@@ -149,6 +149,7 @@ fn CborReader::record(
     }
     let value = self.head(3)
     fields[label] = match Label::from_json_name(label) {
+      None if is_content_format_label(label) => self.field(value, index, label)
       None => {
         self.skip(value, 3)
         Json::null()

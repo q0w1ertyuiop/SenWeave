@@ -1,10 +1,16 @@
 ///|
+priv enum CborLabel {
+  Integer(Int32)
+  Text(String)
+}
+
+///|
 // Output is limited to shallow SenML record maps. Keep major-type-one
 // arguments unsigned so the complete negative integer range remains exact.
 priv enum CborOutput {
   Scalar(@cbor.CborValue)
   NegativeInteger(UInt64)
-  RecordMap(Array[(Int32, CborOutput)])
+  RecordMap(Array[(CborLabel, CborOutput)])
 }
 
 ///|
@@ -44,30 +50,36 @@ fn cbor_measurement_fields(
   sum : Number?,
   time : Number?,
   update_time : Number?,
-) -> Array[(Int32, CborOutput)] {
+  content_format : ContentFormatSpec?,
+) -> Array[(CborLabel, CborOutput)] {
   let fields = []
   if name is Some(text) {
-    fields.push((0, Scalar(@cbor.Text(text))))
+    fields.push((Integer(0), Scalar(@cbor.Text(text))))
   }
   if unit is Some(text) {
-    fields.push((1, Scalar(@cbor.Text(text))))
+    fields.push((Integer(1), Scalar(@cbor.Text(text))))
   }
   match value {
-    Some(Numeric(number)) => fields.push((2, number.to_cbor()))
-    Some(Text(text)) => fields.push((3, Scalar(@cbor.Text(text))))
+    Some(Numeric(number)) => fields.push((Integer(2), number.to_cbor()))
+    Some(Text(text)) => fields.push((Integer(3), Scalar(@cbor.Text(text))))
     Some(Boolean(flag)) =>
-      fields.push((4, Scalar(@cbor.Simple(if flag { 21 } else { 20 }))))
-    Some(Data(bytes)) => fields.push((8, Scalar(@cbor.Bytes(bytes))))
+      fields.push(
+        (Integer(4), Scalar(@cbor.Simple(if flag { 21 } else { 20 }))),
+      )
+    Some(Data(bytes)) => fields.push((Integer(8), Scalar(@cbor.Bytes(bytes))))
     None => ()
   }
   if sum is Some(number) {
-    fields.push((5, number.to_cbor()))
+    fields.push((Integer(5), number.to_cbor()))
   }
   if time is Some(number) {
-    fields.push((6, number.to_cbor()))
+    fields.push((Integer(6), number.to_cbor()))
   }
   if update_time is Some(number) {
-    fields.push((7, number.to_cbor()))
+    fields.push((Integer(7), number.to_cbor()))
+  }
+  if content_format is Some(format) {
+    fields.push((Text("ct"), Scalar(@cbor.Text(format.as_string()))))
   }
   fields
 }
@@ -81,24 +93,28 @@ fn Record::to_cbor(self : Record) -> CborOutput {
     self.sum,
     self.time,
     self.update_time,
+    self.content_format,
   )
   if self.base_name is Some(text) {
-    fields.push((-2, Scalar(@cbor.Text(text))))
+    fields.push((Integer(-2), Scalar(@cbor.Text(text))))
   }
   if self.base_unit is Some(text) {
-    fields.push((-4, Scalar(@cbor.Text(text))))
+    fields.push((Integer(-4), Scalar(@cbor.Text(text))))
   }
   if self.base_time is Some(number) {
-    fields.push((-3, number.to_cbor()))
+    fields.push((Integer(-3), number.to_cbor()))
   }
   if self.base_value is Some(number) {
-    fields.push((-5, number.to_cbor()))
+    fields.push((Integer(-5), number.to_cbor()))
   }
   if self.base_sum is Some(number) {
-    fields.push((-6, number.to_cbor()))
+    fields.push((Integer(-6), number.to_cbor()))
   }
   if self.base_version is Some(_) {
-    fields.push((-1, Scalar(@cbor.Unsigned(10UL))))
+    fields.push((Integer(-1), Scalar(@cbor.Unsigned(10UL))))
+  }
+  if self.base_content_format is Some(format) {
+    fields.push((Text("bct"), Scalar(@cbor.Text(format.as_string()))))
   }
   RecordMap(fields)
 }
@@ -113,6 +129,7 @@ fn ResolvedRecord::to_cbor(self : ResolvedRecord) -> CborOutput {
       self.sum,
       Some(self.time),
       self.update_time,
+      self.content_format,
     ),
   )
 }
@@ -124,8 +141,12 @@ fn CborOutput::size_bound(self : CborOutput) -> Int64 {
     Scalar(@cbor.Bytes(bytes)) => 9L + bytes.length().to_int64()
     RecordMap(fields) => {
       let mut size = 9L
-      for (_, value) in fields {
-        size += 9L + value.size_bound()
+      for (key, value) in fields {
+        let key_size = match key {
+          Integer(_) => 9L
+          Text(text) => 9L + 3L * text.length().to_int64()
+        }
+        size += key_size + value.size_bound()
       }
       size
     }
@@ -170,11 +191,30 @@ fn CborOutput::write(self : CborOutput, buffer : Buffer) -> Unit {
     Scalar(value) => @cbor.encode_to_buffer(value, buffer)
     NegativeInteger(argument) => write_cbor_head(buffer, 1, argument)
     RecordMap(fields) => {
-      // Every standard key fits one byte; preserve the codec's existing order.
-      fields.sort_by((a, b) => cbor_label_order(a.0) - cbor_label_order(b.0))
+      // Base labels encode in one byte; RFC 9193 uses text keys. Keep keys
+      // ordered by encoded length and then bytes, as in the previous codec.
+      fields.sort_by((a, b) => {
+        match (a.0, b.0) {
+          (Integer(x), Integer(y)) => cbor_label_order(x) - cbor_label_order(y)
+          (Integer(_), Text(_)) => -1
+          (Text(_), Integer(_)) => 1
+          (Text(x), Text(y)) => {
+            let length_order = x.length() - y.length()
+            if length_order != 0 {
+              length_order
+            } else {
+              x.compare(y)
+            }
+          }
+        }
+      })
       write_cbor_head(buffer, 5, fields.length().to_uint64())
       for (key, value) in fields {
-        @cbor.encode_to_buffer(@cbor.Integer(key.to_int64()), buffer)
+        let label = match key {
+          Integer(number) => @cbor.Integer(number.to_int64())
+          Text(text) => @cbor.Text(text)
+        }
+        @cbor.encode_to_buffer(label, buffer)
         value.write(buffer)
       }
     }

@@ -1,4 +1,4 @@
-# SenML 能力与标准覆盖 · 0.1.0-dev.15
+# SenML 能力与标准覆盖 · 0.1.0-dev.16
 
 本表区分已实现能力、已知缺口和后续目标。标准基线为 [RFC 8428](https://www.rfc-editor.org/rfc/rfc8428.html)；版本特征、单位和内容格式扩展分别记录。JSON／CBOR／XML 的现有实现仍需继续补充条款与用例对应关系，当前没有宣称全部 SenML 表示均已完成。
 
@@ -20,7 +20,7 @@
 | --- | --- | --- |
 | JSON | UTF-8 字节入口、标准字段和数值校验、原文数字、base64url、原始与展开输出 | 继续扩充标准示例和外部实现对照 |
 | CBOR | 标准整数标签、确定长度包、不定长记录映射、非首选参数宽度、完整基本整数范围、浮点和普通整数构成的 Tag 4 | Tag 2／3 及 Tag 4 的大整数尾数尚未支持；完整约定见 [CBOR 说明](cbor-profile.md) |
-| XML | 十五个基础属性、命名空间、XML 数值／布尔词法、原始与展开输出、UTF-8 与配额 | 已有 Go／ElementTree 对照；DTD 策略与字符边界见 [XML 说明](xml-profile.md) |
+| XML | 十五个基础属性、`ct`／`bct`、命名空间、XML 数值／布尔词法、原始与展开输出、UTF-8 与配额 | 已有 Go／ElementTree 对照；DTD 策略与字符边界见 [XML 说明](xml-profile.md) |
 | EXI | 尚未实现 | 先验证 schema、编码模式、依赖和后端路线，再建设接口 |
 | SenSML | 尚未实现 | 标准的可选流式模式，使用独立媒体类型和增量接口验证，不由有限包入口隐式接收 |
 
@@ -30,7 +30,7 @@
 | --- | --- |
 | [RFC 9100](https://www.rfc-editor.org/rfc/rfc9100.html) 特征与版本 | 尚未实现；不能将未知版本直接按 version 10 处理 |
 | [RFC 8798](https://www.rfc-editor.org/rfc/rfc8798.html) 单位扩展 | 尚未提供注册信息和次级单位接口；单位换算独立规划 |
-| [RFC 9193](https://www.rfc-editor.org/rfc/rfc9193.html) `ct`／`bct` | 尚未提供专用模型与继承处理；当前按普通扩展策略处理 |
+| [RFC 9193](https://www.rfc-editor.org/rfc/rfc9193.html) `ct`／`bct` | 已实现已校验类型、ABNF、三格式编码和二进制值继承；见 [内容格式说明](content-formats.md) |
 | [IANA SenML 注册信息](https://www.iana.org/assignments/senml) | 已核查基础与扩展标签；`vlo` 等扩展需要按其规范单独验证 |
 | CoAP 子包 | JSON／CBOR／XML 已有有界收发、延迟完成和业务键接口；UDP／SQLite 为 Node.js 宿主示例 |
 | MoonBit 后端 | 核心与协议状态机在 native、JS、wasm-gc 运行；真实 UDP 宿主目前为 Node.js |
@@ -38,6 +38,6 @@
 
 ## 验证方式
 
-`cbor_compat_test.mbt` 覆盖编码变体、负整数范围、配额、截断与扩展结构；`encode_json_test.mbt` 覆盖原始包往返和输出预算。外部 `cbor2 5.7.1` 另核对六类输入表示的原始 JSON、原始 CBOR、展开 JSON 与展开 CBOR。Go／Python 共同样本已实际运行 47 组、110 项，关联条款、固定期望及各阶段输出；Go 对照覆盖校验、原始编码和 Normalize，Python 按值更新 API 的实际范围记录。消费接口也进入实际归档检查。
+`cbor_compat_test.mbt` 覆盖编码变体、负整数范围、配额、截断与扩展结构；`encode_json_test.mbt` 覆盖原始包往返和输出预算。外部 `cbor2 5.7.1` 另核对六类输入表示的原始 JSON、原始 CBOR、展开 JSON 与展开 CBOR。Go／Python 共同样本已实际运行 55 组、133 项，关联条款、固定期望及各阶段输出；Go 对照覆盖校验、原始编码和 Normalize，Python 按值更新 API 的实际范围记录。消费接口也进入实际归档检查。
 
 后续以每项标准能力的实现与证据对应情况更新本表。跨语言对照的版本、阶段与差异见 [参考实现比较](comparison.md)和[互操作记录](interoperability.md)。
